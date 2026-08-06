@@ -3,25 +3,19 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider, useSocket } from './context/SocketContext';
 import AuthModal from './components/AuthModal';
+import CustomerInitModal from './components/CustomerInitModal';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import AdminDashboard from './components/AdminDashboard';
 import CallModal from './components/CallModal';
 
-// User Main Support Page (NO LOGIN REQUIRED - Auto Guest Session)
+// User Main Support Page
 function UserMainPage() {
   const { user, loading, autoGuestLogin } = useAuth();
   const [activeChat, setActiveChat] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
 
-  // Auto guest login if no session exists
-  useEffect(() => {
-    if (!loading && !user) {
-      autoGuestLogin();
-    }
-  }, [loading, user]);
-
-  // Fetch Support Chat
+  // Fetch Support Chat once user is logged in / guest initialized
   useEffect(() => {
     if (user) {
       fetch(`/api/chats?userId=${user.id}`)
@@ -46,12 +40,17 @@ function UserMainPage() {
     }
   }, [user]);
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00a884', background: '#0c1317' }}>
         <h2>Connecting to Live Support...</h2>
       </div>
     );
+  }
+
+  // Prompt new visitor for Name and WhatsApp Mobile Number if not registered yet
+  if (!user) {
+    return <CustomerInitModal onSubmit={(name, phone) => autoGuestLogin(name, phone)} />;
   }
 
   return (
@@ -120,7 +119,6 @@ function AdminPage() {
     );
   }
 
-  // If user is not logged in or is a regular guest customer, demand Admin Sign In
   if (!user || user.role !== 'admin') {
     return <AuthModal isAdminLogin={true} />;
   }

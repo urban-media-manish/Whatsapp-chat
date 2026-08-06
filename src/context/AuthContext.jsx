@@ -27,10 +27,13 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Automatic Guest Login for Frictionless Customer Experience
-  const autoGuestLogin = async () => {
+  const autoGuestLogin = async (name, phone) => {
     try {
-      const res = await fetch('/api/auth/guest', { method: 'POST' });
+      const res = await fetch('/api/auth/guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone })
+      });
       const data = await res.json();
       if (data.token && data.user) {
         localStorage.setItem('whatsapp_token', data.token);

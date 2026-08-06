@@ -47,14 +47,16 @@ const activeSockets = new Map();
 
 /* --- REST API ROUTES --- */
 
-// Auto Guest Registration for Customers (NO LOGIN REQUIRED FOR VISITORS)
+// Auto Guest / Customer Registration with Name & Phone Number
 app.post('/api/auth/guest', async (req, res) => {
   try {
     const db = getDb();
+    const { name: inputName, phone: inputPhone } = req.body;
+
     const guestId = Math.floor(1000 + Math.random() * 9000);
-    const username = `guest_${Date.now()}_${guestId}`;
-    const name = `Customer #${guestId}`;
-    const phone = `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
+    const username = `user_${Date.now()}_${guestId}`;
+    const name = inputName ? inputName.trim() : `Customer #${guestId}`;
+    const phone = inputPhone ? (inputPhone.startsWith('+') ? inputPhone.trim() : `+91 ${inputPhone.trim()}`) : `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
     const avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
 
     const result = await db.run(
@@ -152,40 +154,6 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ token, user: userWithoutPassword });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Register
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const db = getDb();
-    const { username, password, name, phone, avatar, about } = req.body;
-
-    if (!username || !password || !name) {
-      return res.status(400).json({ error: 'Username, password and name are required' });
-    }
-
-    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', [username.toLowerCase().trim()]);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username already taken' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userAvatar = avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
-    const userPhone = phone || `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
-
-    const result = await db.run(
-      'INSERT INTO users (username, password, name, phone, avatar, about) VALUES (?, ?, ?, ?, ?, ?)',
-      [username.toLowerCase().trim(), hashedPassword, name.trim(), userPhone, userAvatar, about || 'Available | Using WhatsApp']
-    );
-
-    const user = await db.get('SELECT id, username, name, phone, avatar, about, role, status FROM users WHERE id = ?', [result.lastID]);
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.json({ token, user });
-  } catch (err) {
-    console.error('Register error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
