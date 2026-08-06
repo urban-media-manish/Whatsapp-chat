@@ -1,19 +1,30 @@
 # Dependencies
 node_modules/
+client/node_modules/
+server/node_modules/
 
-# Production builds
-dist/
-build/
-
-# Local Database & Uploads
-server/whatsapp.db
-uploads/*
-!uploads/.gitkeep
-
-# Environment variables
+# Environment variables (NEVER commit these!)
 .env
-.env.local
+server/.env
+client/.env
+*.env
 
-# Operating System files
+# Build outputs
+client/dist/
+client/build/
+
+# Uploads (user data)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/

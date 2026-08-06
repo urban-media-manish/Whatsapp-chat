@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #f0f2f5;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f7f9fa;
+    --bg-chat: #efeae2;
+    --text-primary: #111b21;
+    --text-secondary: #667781;
+    --text-muted: #8696a0;
+    --border-color: #e9edef;
+    --bubble-sent: #d9fdd3;
+    --bubble-received: #ffffff;
+    --accent: #00a884;
+    --accent-hover: #008f70;
+    --header-bg: #f0f2f5;
+    --sidebar-bg: #ffffff;
+  }
+
+  .dark {
+    --bg-primary: #111b21;
+    --bg-secondary: #202c33;
+    --bg-tertiary: #111b21;
+    --bg-chat: #0b141a;
+    --text-primary: #e9edef;
+    --text-secondary: #8696a0;
+    --text-muted: #667781;
+    --border-color: #222d34;
+    --bubble-sent: #005c4b;
+    --bubble-received: #202c33;
+    --accent: #00a884;
+    --accent-hover: #008f70;
+    --header-bg: #202c33;
+    --sidebar-bg: #111b21;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 150, 160, 0.6);
+}
+
+/* WhatsApp Wallpaper Pattern Overlay */
+.chat-wallpaper {
+  background-color: var(--bg-chat);
+  background-image: radial-gradient(rgba(0, 168, 132, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Glassmorphism & Cards */
+.glass-panel {
+  background: rgba(32, 44, 51, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Pulse animation for voice recording */
+@keyframes audioPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-recording {
+  animation: audioPulse 1.5s infinite ease-in-out;
+}
