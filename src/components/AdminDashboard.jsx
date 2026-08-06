@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Send, CheckCheck, Users, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Search, Send, CheckCheck, ArrowLeft, Phone, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
@@ -14,7 +14,7 @@ export default function AdminDashboard() {
   const [mobileView, setMobileView] = useState('list'); // 'list' or 'chat'
   const messagesEndRef = useRef(null);
 
-  // Fetch all user chats for Admin management
+  // Fetch all customer chats for Admin management
   const fetchChats = async () => {
     if (!user) return;
     try {
@@ -166,14 +166,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="app-container">
-      {/* Left Management Sidebar */}
+      {/* Left Customer List Sidebar */}
       <aside className={`sidebar ${mobileView === 'chat' ? 'mobile-hidden' : ''}`}>
         <header className="sidebar-header">
           <div className="user-avatar-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src={user.avatar} alt="Support Agent" className="avatar" />
             <div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px' }}>Management Console</div>
-              <div style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>Support Agent • Online</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px' }}>Customer Management</div>
+              <div style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>Agent Console • Online</div>
             </div>
           </div>
         </header>
@@ -184,14 +184,14 @@ export default function AdminDashboard() {
             <Search size={18} color="var(--icon-color)" />
             <input 
               type="text" 
-              placeholder="Search user name or phone number..." 
+              placeholder="Search user name or phone..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
 
-        {/* User List */}
+        {/* Customer List */}
         <div className="chats-list">
           {filteredChats.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Right Live Support Console */}
+      {/* Right Live Customer Support Console */}
       <main className={`main-chat ${mobileView === 'list' ? 'mobile-hidden' : ''}`}>
         {activeChat ? (
           <div className="chat-window">
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
             </header>
 
             {/* Quick Template Generator Bar for Agents */}
-            <div style={{ padding: '8px 12px', background: '#162026', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px', alignItems: 'center', overflowX: 'auto' }}>
+            <div style={{ padding: '8px 14px', background: '#162026', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '10px', alignItems: 'center', overflowX: 'auto', flexShrink: 0 }}>
               <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Quick Cards:</span>
               <button className="view-btn" onClick={handleSendPromoCard} style={{ borderColor: '#f7b731', color: '#f7b731', whiteSpace: 'nowrap' }}>
                 + BETBOSS99 Card

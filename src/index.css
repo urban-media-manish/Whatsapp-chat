@@ -9,7 +9,7 @@
   font-weight: 400;
   line-height: 1.5;
 
-  /* Ultra-Premium WhatsApp Web Design Tokens */
+  /* Ultra-Premium WhatsApp Web Design System */
   --bg-app: #0b141a;
   --bg-sidebar: #111b21;
   --header-bg: #202c33;
@@ -31,9 +31,6 @@
   --badge-text: #111b21;
   --card-bg: #1f2c34;
   --gold-accent: #f7b731;
-  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  --glass-bg: rgba(32, 44, 51, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme="light"] {
@@ -52,7 +49,6 @@
   --input-bg: #ffffff;
   --icon-color: #54656f;
   --card-bg: #ffffff;
-  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -66,12 +62,13 @@
 html {
   overscroll-behavior: none;
   height: 100dvh;
+  width: 100vw;
   overflow: hidden;
 }
 
 body {
   overscroll-behavior: none;
-  min-width: 320px;
+  width: 100vw;
   height: 100dvh;
   margin: 0;
   overflow: hidden;
@@ -102,18 +99,21 @@ body {
   background: rgba(134, 150, 160, 0.5);
 }
 
+/* App Container Layout */
 .app-container {
+  flex: 1;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   display: flex;
   background-color: var(--bg-sidebar);
   position: relative;
   overflow: hidden;
 }
 
-/* Header Switcher Bar */
+/* Top View Switcher Toolbar */
 .view-switcher-bar {
-  min-height: 44px;
+  height: 48px;
+  min-height: 48px;
   background-color: #080e12;
   border-bottom: 1px solid var(--border-color);
   display: flex;
@@ -121,6 +121,7 @@ body {
   justify-content: space-between;
   padding: 0 16px;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .view-btn {
@@ -151,9 +152,9 @@ body {
   box-shadow: 0 2px 8px rgba(0, 168, 132, 0.3);
 }
 
-/* Sidebar */
+/* Sidebar Layout */
 .sidebar {
-  width: 32%;
+  width: 360px;
   min-width: 320px;
   max-width: 420px;
   height: 100%;
@@ -161,17 +162,20 @@ body {
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .sidebar-header {
   height: 60px;
+  min-height: 60px;
   background-color: var(--header-bg);
   padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .user-avatar-wrapper {
@@ -215,6 +219,7 @@ body {
 .search-container {
   padding: 8px 12px;
   background-color: var(--bg-sidebar);
+  flex-shrink: 0;
 }
 
 .search-box {
@@ -225,7 +230,6 @@ body {
   padding: 8px 14px;
   gap: 10px;
   border: 1px solid var(--border-color);
-  transition: border-color 0.2s;
 }
 
 .search-box:focus-within {
@@ -345,16 +349,26 @@ body {
 /* Main Chat Area */
 .main-chat {
   flex: 1;
-  height: 100dvh;
+  height: 100%;
   background-color: var(--chat-bg);
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
+}
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* Teal Support Header (Matching Screenshot) */
 .support-header {
   height: 60px;
+  min-height: 60px;
   background-color: var(--support-header-bg);
   padding: 10px 16px;
   display: flex;
@@ -363,6 +377,7 @@ body {
   color: white;
   z-index: 10;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .support-header-info {
@@ -391,7 +406,6 @@ body {
   justify-content: center;
   font-size: 11px;
   font-weight: 900;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
 /* Authentic WhatsApp Doodle Wallpaper */
@@ -400,14 +414,14 @@ body {
   background-size: 24px 24px;
 }
 
-/* Messages Container */
+/* Messages Flow Container */
 .messages-container {
   flex: 1;
-  padding: 20px 5%;
+  padding: 20px 4%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .date-divider {
@@ -419,13 +433,11 @@ body {
   padding: 4px 14px;
   border-radius: 12px;
   margin: 6px 0;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Messages Bubbles */
 .message {
-  max-width: 75%;
+  max-width: 70%;
   padding: 10px 14px;
   border-radius: 10px;
   position: relative;
@@ -448,23 +460,30 @@ body {
   border-top-right-radius: 0;
 }
 
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  float: right;
+  margin-left: 12px;
+}
+
 /* Rich BETBOSS99 Promo Card (Matching Screenshot) */
 .promo-card {
   background: linear-gradient(145deg, #1f2c34 0%, #162026 100%);
   border-radius: 12px;
   padding: 16px 18px;
   border: 1px solid rgba(247, 183, 49, 0.4);
-  max-width: 420px;
+  max-width: 440px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.promo-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  margin: 4px 0;
 }
 
 .promo-card-title {
@@ -474,7 +493,6 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  letter-spacing: 0.3px;
 }
 
 .promo-card-row {
@@ -492,14 +510,10 @@ body {
   font-weight: 500;
 }
 
-.promo-card-link:hover {
-  color: #5dedff;
-}
-
 .promo-card-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-  margin: 6px 0;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 4px 0;
 }
 
 /* Options Selection Card */
@@ -512,7 +526,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  margin: 4px 0;
 }
 
 .options-btn {
@@ -529,14 +543,12 @@ body {
   align-items: center;
   gap: 10px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15);
 }
 
 .options-btn:hover {
   background: rgba(37, 211, 102, 0.2);
   border-color: #25d366;
   transform: scale(1.02);
-  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.3);
 }
 
 /* Error alert bubble */
@@ -548,17 +560,19 @@ body {
   font-size: 14px;
   border-left: 4px solid #ea4335;
   display: inline-block;
-  box-shadow: 0 4px 12px rgba(234, 67, 53, 0.2);
+  margin: 4px 0;
 }
 
 /* Chat Input Bar */
 .chat-input-bar {
   min-height: 64px;
+  height: 64px;
   background-color: var(--header-bg);
   padding: 10px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .input-box-wrapper {
@@ -568,12 +582,6 @@ body {
   padding: 10px 18px;
   display: flex;
   align-items: center;
-  border: 1px solid transparent;
-  transition: border-color 0.2s;
-}
-
-.input-box-wrapper:focus-within {
-  border-color: var(--accent);
 }
 
 .input-box {
@@ -585,7 +593,6 @@ body {
   font-size: 15px;
 }
 
-/* Circular Send Button */
 .send-circle-btn {
   width: 44px;
   height: 44px;
@@ -597,16 +604,15 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s, background 0.2s;
-  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.4);
+  transition: transform 0.15s;
+  flex-shrink: 0;
 }
 
 .send-circle-btn:hover {
   transform: scale(1.08);
-  background-color: #008f70;
 }
 
-/* Glassmorphic Customer Init Modal */
+/* Modals */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -625,17 +631,11 @@ body {
   border-radius: 16px;
   width: 100%;
   max-width: 420px;
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  animation: modalFadeIn 0.3s ease-out;
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to { opacity: 1; transform: scale(1); }
 }
 
 .auth-input {
@@ -647,12 +647,6 @@ body {
   color: var(--text-primary);
   font-size: 15px;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.auth-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 10px rgba(0, 168, 132, 0.3);
 }
 
 .auth-btn {
@@ -664,20 +658,9 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 15.5px;
-  transition: transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.4);
 }
 
-.auth-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 168, 132, 0.5);
-}
-
-/* ==========================================================================
-   100% RESPONSIVE MEDIA QUERIES (MOBILE, TABLET, DESKTOP)
-   ========================================================================== */
-
-/* Mobile Devices (< 768px) */
+/* Mobile Responsive Adjustments */
 @media (max-width: 767px) {
   .sidebar {
     width: 100%;
@@ -689,56 +672,19 @@ body {
   }
 
   .sidebar.mobile-hidden {
-    display: none;
+    display: none !important;
+  }
+
+  .main-chat.mobile-hidden {
+    display: none !important;
   }
 
   .main-chat {
     width: 100%;
-    height: 100dvh;
+    height: 100%;
   }
 
   .message {
     max-width: 88%;
-  }
-
-  .promo-card, .options-card {
-    max-width: 100%;
-  }
-
-  .chat-input-bar {
-    padding: 8px 12px;
-  }
-
-  .view-switcher-bar {
-    padding: 0 10px;
-    font-size: 11px;
-  }
-
-  .view-btn {
-    padding: 4px 10px;
-    font-size: 11px;
-  }
-}
-
-/* Tablets (768px - 1024px) */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .sidebar {
-    width: 320px;
-    min-width: 300px;
-  }
-
-  .message {
-    max-width: 80%;
-  }
-}
-
-/* Large Screens (> 1024px) */
-@media (min-width: 1441px) {
-  .app-container {
-    width: 98vw;
-    height: 96dvh;
-    border-radius: 8px;
-    margin: auto;
-    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
   }
 }
