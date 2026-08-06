@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider, useSocket } from './context/SocketContext';
 import AuthModal from './components/AuthModal';
@@ -8,12 +8,20 @@ import ChatWindow from './components/ChatWindow';
 import AdminDashboard from './components/AdminDashboard';
 import CallModal from './components/CallModal';
 
-// User Main Support Page (Clean WhatsApp Web View)
+// User Main Support Page (NO LOGIN REQUIRED - Auto Guest Session)
 function UserMainPage() {
-  const { user } = useAuth();
+  const { user, loading, autoGuestLogin } = useAuth();
   const [activeChat, setActiveChat] = useState(null);
   const [activeCall, setActiveCall] = useState(null);
 
+  // Auto guest login if no session exists
+  useEffect(() => {
+    if (!loading && !user) {
+      autoGuestLogin();
+    }
+  }, [loading, user]);
+
+  // Fetch Support Chat
   useEffect(() => {
     if (user) {
       fetch(`/api/chats?userId=${user.id}`)
@@ -38,7 +46,13 @@ function UserMainPage() {
     }
   }, [user]);
 
-  if (!user) return <AuthModal />;
+  if (loading || !user) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00a884', background: '#0c1317' }}>
+        <h2>Connecting to Live Support...</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -73,7 +87,7 @@ function UserMainPage() {
         />
       )}
 
-      {/* Discrete Admin Link in corner for management */}
+      {/* Discrete Admin Link for Management */}
       <div style={{ position: 'fixed', bottom: '12px', right: '16px', zIndex: 1000 }}>
         <Link 
           to="/admin" 
@@ -81,7 +95,7 @@ function UserMainPage() {
             color: 'var(--text-secondary)', 
             fontSize: '11px', 
             textDecoration: 'none',
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.6)',
             padding: '4px 10px',
             borderRadius: '10px',
             border: '1px solid var(--border-color)'
@@ -94,29 +108,44 @@ function UserMainPage() {
   );
 }
 
-// Admin Management Page
+// Admin Management Page (LOGIN REQUIRED FOR ADMIN ONLY)
 function AdminPage() {
-  const { user } = useAuth();
+  const { user, loading, logout } = useAuth();
 
-  if (!user) return <AuthModal />;
+  if (loading) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00a884', background: '#0c1317' }}>
+        <h2>Loading Admin Console...</h2>
+      </div>
+    );
+  }
+
+  // If user is not logged in or is a regular guest customer, demand Admin Sign In
+  if (!user || user.role !== 'admin') {
+    return <AuthModal isAdminLogin={true} />;
+  }
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Header bar with link back to main page */}
       <div className="view-switcher-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontWeight: 600, fontSize: '13px' }}>
           <span style={{ color: '#00a884' }}>📊 Agent Management Console</span>
           <span style={{ opacity: 0.5 }}>|</span>
-          <span style={{ color: 'var(--text-secondary)' }}>Agent: <strong>{user.name}</strong> ({user.phone || `@${user.username}`})</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Agent: <strong>{user.name}</strong> ({user.phone})</span>
         </div>
 
-        <Link 
-          to="/" 
-          className="view-btn active"
-          style={{ textDecoration: 'none', display: 'inline-block' }}
-        >
-          ← Go to User Main Page
-        </Link>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Link 
+            to="/" 
+            className="view-btn active"
+            style={{ textDecoration: 'none', display: 'inline-block' }}
+          >
+            ← View Customer Page
+          </Link>
+          <button className="view-btn" onClick={logout} style={{ borderColor: '#ea4335', color: '#ea4335' }}>
+            Logout Admin
+          </button>
+        </div>
       </div>
 
       <AdminDashboard />

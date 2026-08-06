@@ -27,6 +27,21 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Automatic Guest Login for Frictionless Customer Experience
+  const autoGuestLogin = async () => {
+    try {
+      const res = await fetch('/api/auth/guest', { method: 'POST' });
+      const data = await res.json();
+      if (data.token && data.user) {
+        localStorage.setItem('whatsapp_token', data.token);
+        setUser(data.user);
+        return data.user;
+      }
+    } catch (e) {
+      console.error('Auto guest login error:', e);
+    }
+  };
+
   const login = async (username, password) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -41,27 +56,13 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
-  const register = async (username, password, name, avatar, about) => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, name, avatar, about })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-
-    localStorage.setItem('whatsapp_token', data.token);
-    setUser(data.user);
-    return data.user;
-  };
-
   const logout = () => {
     localStorage.removeItem('whatsapp_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, autoGuestLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

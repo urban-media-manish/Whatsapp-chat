@@ -47,35 +47,26 @@ const activeSockets = new Map();
 
 /* --- REST API ROUTES --- */
 
-// Register
-app.post('/api/auth/register', async (req, res) => {
+// Auto Guest Registration for Customers (NO LOGIN REQUIRED FOR VISITORS)
+app.post('/api/auth/guest', async (req, res) => {
   try {
     const db = getDb();
-    const { username, password, name, phone, avatar, about } = req.body;
-
-    if (!username || !password || !name) {
-      return res.status(400).json({ error: 'Username, password and name are required' });
-    }
-
-    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', [username.toLowerCase().trim()]);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username already taken' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userAvatar = avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
-    const userPhone = phone || `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
+    const guestId = Math.floor(1000 + Math.random() * 9000);
+    const username = `guest_${Date.now()}_${guestId}`;
+    const name = `Customer #${guestId}`;
+    const phone = `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
+    const avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
 
     const result = await db.run(
-      'INSERT INTO users (username, password, name, phone, avatar, about) VALUES (?, ?, ?, ?, ?, ?)',
-      [username.toLowerCase().trim(), hashedPassword, name.trim(), userPhone, userAvatar, about || 'Available | Using WhatsApp']
+      'INSERT INTO users (username, password, name, phone, avatar, about, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [username, 'guest_pass', name, phone, avatar, 'Visitor | Seeking Support', 'user']
     );
 
     const user = await db.get('SELECT id, username, name, phone, avatar, about, role, status FROM users WHERE id = ?', [result.lastID]);
 
-    // Auto-create chat with Support ✓ agent and send initial welcome template card
+    // Create Support chat & seed welcome promo card
     const supportUser = await db.get("SELECT id FROM users WHERE username = 'support'");
-    if (supportUser && user.id !== supportUser.id) {
+    if (supportUser) {
       const u1 = Math.min(user.id, supportUser.id);
       const u2 = Math.max(user.id, supportUser.id);
 
@@ -85,7 +76,6 @@ app.post('/api/auth/register', async (req, res) => {
       );
       const chatId = chatRes.lastID;
 
-      // Welcome Card Template
       const templatePayload = JSON.stringify({
         title: "🤝 BETBOSS99 | TRUSTED & SECURE 🤝",
         subtitle: "100% Safe Platform",
@@ -120,12 +110,12 @@ app.post('/api/auth/register', async (req, res) => {
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
   } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Guest auth error:', err);
+    res.status(500).json({ error: 'Guest login failed' });
   }
 });
 
-// Login
+// Admin / Agent Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const db = getDb();
@@ -137,12 +127,12 @@ app.post('/api/auth/login', async (req, res) => {
 
     const user = await db.get('SELECT * FROM users WHERE username = ?', [username.toLowerCase().trim()]);
     if (!user) {
-      return res.status(400).json({ error: 'Invalid username or password' });
+      return res.status(400).json({ error: 'Invalid admin username or password' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password).catch(() => user.password === password);
     if (!validPassword) {
-      return res.status(400).json({ error: 'Invalid username or password' });
+      return res.status(400).json({ error: 'Invalid admin username or password' });
     }
 
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
@@ -155,7 +145,41 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Me Profile
+// Register
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const db = getDb();
+    const { username, password, name, phone, avatar, about } = req.body;
+
+    if (!username || !password || !name) {
+      return res.status(400).json({ error: 'Username, password and name are required' });
+    }
+
+    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', [username.toLowerCase().trim()]);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userAvatar = avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
+    const userPhone = phone || `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
+
+    const result = await db.run(
+      'INSERT INTO users (username, password, name, phone, avatar, about) VALUES (?, ?, ?, ?, ?, ?)',
+      [username.toLowerCase().trim(), hashedPassword, name.trim(), userPhone, userAvatar, about || 'Available | Using WhatsApp']
+    );
+
+    const user = await db.get('SELECT id, username, name, phone, avatar, about, role, status FROM users WHERE id = ?', [result.lastID]);
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({ token, user });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Profile check
 app.get('/api/auth/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -286,8 +310,6 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 /* --- SOCKET.IO REALTIME ENGINE --- */
 io.on('connection', (socket) => {
-  console.log('⚡ Socket connected:', socket.id);
-
   socket.on('user_online', async (userId) => {
     if (!userId) return;
     socket.userId = userId;
