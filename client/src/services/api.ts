@@ -1,6 +1,7 @@
 import type { User, Customer, Conversation, Message, Note, QuickReply, AnalyticsData } from '../types';
 
-const API_BASE = '/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE = `${BASE_URL}/api`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('agent_token');
