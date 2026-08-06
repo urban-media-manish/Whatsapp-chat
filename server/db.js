@@ -17,7 +17,6 @@ export async function initDb() {
     driver: sqlite3.Database
   });
 
-  // Enable foreign keys
   await db.run('PRAGMA foreign_keys = ON');
 
   // Create Users table
@@ -36,6 +35,15 @@ export async function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // Safely add missing columns if upgrading existing table
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''");
+  } catch (e) {}
+
+  try {
+    await db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+  } catch (e) {}
 
   // Create Chats table
   await db.exec(`
@@ -72,6 +80,14 @@ export async function initDb() {
       FOREIGN KEY (recipient_id) REFERENCES users (id)
     );
   `);
+
+  try {
+    await db.exec("ALTER TABLE messages ADD COLUMN template_data TEXT DEFAULT ''");
+  } catch (e) {}
+
+  try {
+    await db.exec("ALTER TABLE messages ADD COLUMN options_data TEXT DEFAULT ''");
+  } catch (e) {}
 
   // Ensure default Support Account exists
   const supportUser = await db.get("SELECT id FROM users WHERE username = 'support'");
