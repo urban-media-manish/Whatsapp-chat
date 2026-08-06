@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function AuthModal({ isAdminLogin }) {
+export default function AuthModal() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,7 +49,7 @@ export default function AuthModal({ isAdminLogin }) {
             <input 
               type="text" 
               className="auth-input" 
-              placeholder="Username (e.g. support)" 
+              placeholder="admin" 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required 
@@ -61,7 +61,7 @@ export default function AuthModal({ isAdminLogin }) {
             <input 
               type="password" 
               className="auth-input" 
-              placeholder="••••••••" 
+              placeholder="admin" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required 
@@ -73,9 +73,9 @@ export default function AuthModal({ isAdminLogin }) {
           </button>
         </form>
 
-        <div style={{ background: '#111b21', padding: '10px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-muted)', textAlignment: 'center', textAlign: 'center' }}>
-          🔑 Default Admin Login:<br/>
-          Username: <strong style={{ color: '#00a884' }}>support</strong> | Password: <strong style={{ color: '#00a884' }}>support123</strong>
+        <div style={{ background: '#111b21', padding: '10px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+          🔑 Admin Credentials:<br/>
+          Username: <strong style={{ color: '#00a884' }}>admin</strong> | Password: <strong style={{ color: '#00a884' }}>admin</strong>
         </div>
       </div>
     </div>

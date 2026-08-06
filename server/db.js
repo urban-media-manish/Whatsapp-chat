@@ -36,14 +36,8 @@ export async function initDb() {
     );
   `);
 
-  // Safely add missing columns if upgrading existing table
-  try {
-    await db.exec("ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''");
-  } catch (e) {}
-
-  try {
-    await db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
-  } catch (e) {}
+  try { await db.exec("ALTER TABLE users ADD COLUMN phone TEXT DEFAULT ''"); } catch (e) {}
+  try { await db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch (e) {}
 
   // Create Chats table
   await db.exec(`
@@ -81,24 +75,22 @@ export async function initDb() {
     );
   `);
 
-  try {
-    await db.exec("ALTER TABLE messages ADD COLUMN template_data TEXT DEFAULT ''");
-  } catch (e) {}
+  try { await db.exec("ALTER TABLE messages ADD COLUMN template_data TEXT DEFAULT ''"); } catch (e) {}
+  try { await db.exec("ALTER TABLE messages ADD COLUMN options_data TEXT DEFAULT ''"); } catch (e) {}
 
-  try {
-    await db.exec("ALTER TABLE messages ADD COLUMN options_data TEXT DEFAULT ''");
-  } catch (e) {}
-
-  // Ensure default Support Account exists
-  const supportUser = await db.get("SELECT id FROM users WHERE username = 'support'");
-  if (!supportUser) {
+  // Ensure default Admin/Support Account exists with password "admin"
+  const adminUser = await db.get("SELECT id FROM users WHERE username = 'admin' OR username = 'support'");
+  if (!adminUser) {
     await db.run(
       `INSERT INTO users (username, password, name, phone, avatar, about, role, status) 
-       VALUES ('support', 'support123', 'Support ✓', '+91 98765 43210', 
+       VALUES ('admin', 'admin', 'Support ✓', '+91 98765 43210', 
        'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80', 
        '24/7 Live Customer Support', 'admin', 'online')`
     );
-    console.log('✅ Support Agent Account Created!');
+    console.log('✅ Admin Account Created with Username: admin, Password: admin');
+  } else {
+    // Update password to 'admin'
+    await db.run("UPDATE users SET password = 'admin', role = 'admin' WHERE username = 'admin' OR username = 'support'");
   }
 
   console.log('✅ SQLite Database initialized successfully!');
