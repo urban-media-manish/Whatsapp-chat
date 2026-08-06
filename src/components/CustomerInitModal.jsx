@@ -21,28 +21,28 @@ export default function CustomerInitModal({ onSubmit }) {
 
   return (
     <div className="modal-overlay">
-      <div className="auth-card" style={{ maxWidth: '400px' }}>
+      <div className="auth-card">
         <div style={{ textAlign: 'center' }}>
           <img 
             src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" 
             alt="WhatsApp Logo" 
-            style={{ width: '48px', height: '48px', marginBottom: '8px' }} 
+            style={{ width: '56px', height: '56px', marginBottom: '12px', filter: 'drop-shadow(0 4px 8px rgba(0,168,132,0.4))' }} 
           />
-          <h2 style={{ fontSize: '20px', color: 'var(--text-primary)' }}>Welcome to Live Support!</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>
-            Please enter your name & WhatsApp number to start chatting with Support ✓
+          <h2 style={{ fontSize: '22px', color: 'var(--text-primary)', fontWeight: 800 }}>Welcome to Live Support!</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13.5px', marginTop: '6px', lineHeight: 1.5 }}>
+            Please enter your name & WhatsApp mobile number to start chatting with <strong>Support ✓</strong>
           </p>
         </div>
 
         {error && (
-          <div style={{ color: '#ea4335', fontSize: '13px', textAlign: 'center', background: 'rgba(234, 67, 53, 0.1)', padding: '8px', borderRadius: '6px' }}>
-            {error}
+          <div style={{ color: '#ea4335', fontSize: '13px', textAlign: 'center', background: 'rgba(234, 67, 53, 0.12)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(234, 67, 53, 0.3)' }}>
+            ⚠️ {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label>Your Name</label>
+            <label style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Your Name</label>
             <input 
               type="text" 
               className="auth-input" 
@@ -50,11 +50,12 @@ export default function CustomerInitModal({ onSubmit }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required 
+              autoFocus
             />
           </div>
 
           <div>
-            <label>WhatsApp Mobile Number</label>
+            <label style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, marginBottom: '6px', display: 'block' }}>WhatsApp Mobile Number</label>
             <input 
               type="tel" 
               className="auth-input" 
@@ -65,10 +66,14 @@ export default function CustomerInitModal({ onSubmit }) {
             />
           </div>
 
-          <button type="submit" className="auth-btn">
+          <button type="submit" className="auth-btn" style={{ marginTop: '6px' }}>
             💬 Start Live Support Chat
           </button>
         </form>
+
+        <div style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          🔒 Safe & Encrypted Customer Support Session
+        </div>
       </div>
     </div>
   );

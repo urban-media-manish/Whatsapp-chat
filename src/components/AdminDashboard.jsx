@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Send, CheckCheck, Check, ShieldCheck, Phone, Video, MessageSquare, PlusCircle } from 'lucide-react';
+import { Search, Send, CheckCheck, Users, MessageSquare, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [mobileView, setMobileView] = useState('list'); // 'list' or 'chat'
   const messagesEndRef = useRef(null);
 
   // Fetch all user chats for Admin management
@@ -86,7 +87,6 @@ export default function AdminDashboard() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Send plain text message
   const handleSendText = () => {
     if (!inputText.trim() || !activeChat || !socket) return;
 
@@ -101,7 +101,7 @@ export default function AdminDashboard() {
     setInputText('');
   };
 
-  // Send BETBOSS99 Promo Card (Matching Screenshot)
+  // Send BETBOSS99 Promo Card
   const handleSendPromoCard = () => {
     if (!activeChat || !socket) return;
 
@@ -167,13 +167,13 @@ export default function AdminDashboard() {
   return (
     <div className="app-container">
       {/* Left Management Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${mobileView === 'chat' ? 'mobile-hidden' : ''}`}>
         <header className="sidebar-header">
-          <div className="user-avatar-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="user-avatar-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src={user.avatar} alt="Support Agent" className="avatar" />
             <div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '15px' }}>Management Console</div>
-              <div style={{ color: 'var(--accent)', fontSize: '12px' }}>Support Agent • Online</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: '15px' }}>Management Console</div>
+              <div style={{ color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>Support Agent • Online</div>
             </div>
           </div>
         </header>
@@ -193,62 +193,80 @@ export default function AdminDashboard() {
 
         {/* User List */}
         <div className="chats-list">
-          {filteredChats.map(chat => {
-            const isOnline = onlineUsers.has(chat.contactId) || chat.userStatus === 'online';
-            const isSelected = activeChat && activeChat.chatId === chat.chatId;
+          {filteredChats.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+              No customer chats yet.
+            </div>
+          ) : (
+            filteredChats.map(chat => {
+              const isOnline = onlineUsers.has(chat.contactId) || chat.userStatus === 'online';
+              const isSelected = activeChat && activeChat.chatId === chat.chatId;
 
-            return (
-              <div 
-                key={chat.chatId} 
-                className={`chat-item ${isSelected ? 'active' : ''}`}
-                onClick={() => setActiveChat({
-                  chatId: chat.chatId,
-                  contact: {
-                    id: chat.contactId,
-                    name: chat.name,
-                    username: chat.username,
-                    phone: chat.phone,
-                    avatar: chat.avatar,
-                    about: chat.about,
-                    status: isOnline ? 'online' : 'offline'
-                  }
-                })}
-              >
-                <div className="chat-avatar-wrapper">
-                  <img src={chat.avatar} alt={chat.name} className="avatar" />
-                  {isOnline && <div className="online-indicator" />}
-                </div>
-
-                <div className="chat-info">
-                  <div className="chat-top-row">
-                    <span className="chat-name">{chat.name}</span>
-                    <span className="chat-time">
-                      {chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
+              return (
+                <div 
+                  key={chat.chatId} 
+                  className={`chat-item ${isSelected ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveChat({
+                      chatId: chat.chatId,
+                      contact: {
+                        id: chat.contactId,
+                        name: chat.name,
+                        username: chat.username,
+                        phone: chat.phone,
+                        avatar: chat.avatar,
+                        about: chat.about,
+                        status: isOnline ? 'online' : 'offline'
+                      }
+                    });
+                    setMobileView('chat');
+                  }}
+                >
+                  <div className="chat-avatar-wrapper">
+                    <img src={chat.avatar} alt={chat.name} className="avatar" />
+                    {isOnline && <div className="online-indicator" />}
                   </div>
 
-                  <div className="chat-phone">{chat.phone || `@${chat.username}`}</div>
+                  <div className="chat-info">
+                    <div className="chat-top-row">
+                      <span className="chat-name">{chat.name}</span>
+                      <span className="chat-time">
+                        {chat.lastMessageTime ? new Date(chat.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
 
-                  <div className="chat-bottom-row">
-                    <span className="last-msg">{chat.lastMessage || 'No messages'}</span>
-                    {chat.unreadCount > 0 && (
-                      <span className="unread-badge">{chat.unreadCount}</span>
-                    )}
+                    <div className="chat-phone">{chat.phone || `@${chat.username}`}</div>
+
+                    <div className="chat-bottom-row">
+                      <span className="last-msg">{chat.lastMessage || 'No messages'}</span>
+                      {chat.unreadCount > 0 && (
+                        <span className="unread-badge">{chat.unreadCount}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </aside>
 
       {/* Right Live Support Console */}
-      <main className="main-chat">
+      <main className={`main-chat ${mobileView === 'list' ? 'mobile-hidden' : ''}`}>
         {activeChat ? (
           <div className="chat-window">
             {/* Header */}
             <header className="support-header">
               <div className="support-header-info">
+                {/* Mobile Back Button */}
+                <button 
+                  className="icon-btn" 
+                  style={{ color: 'white', marginRight: '4px' }} 
+                  onClick={() => setMobileView('list')}
+                >
+                  <ArrowLeft size={22} />
+                </button>
+
                 <img src={activeChat.contact.avatar} alt={activeChat.contact.name} className="avatar" />
                 <div>
                   <div className="support-name">
@@ -259,21 +277,18 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: '13px', background: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '12px' }}>
-                Customer Agent View
-              </div>
             </header>
 
             {/* Quick Template Generator Bar for Agents */}
-            <div style={{ padding: '8px 16px', background: '#182229', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '10px', alignItems: 'center', overflowX: 'auto' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Quick Templates:</span>
-              <button className="view-btn" onClick={handleSendPromoCard} style={{ borderColor: '#f7b731', color: '#f7b731' }}>
+            <div style={{ padding: '8px 12px', background: '#162026', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px', alignItems: 'center', overflowX: 'auto' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>Quick Cards:</span>
+              <button className="view-btn" onClick={handleSendPromoCard} style={{ borderColor: '#f7b731', color: '#f7b731', whiteSpace: 'nowrap' }}>
                 + BETBOSS99 Card
               </button>
-              <button className="view-btn" onClick={handleSendOptionsCard} style={{ borderColor: '#25d366', color: '#25d366' }}>
+              <button className="view-btn" onClick={handleSendOptionsCard} style={{ borderColor: '#25d366', color: '#25d366', whiteSpace: 'nowrap' }}>
                 + Option Buttons
               </button>
-              <button className="view-btn" onClick={handleSendErrorAlert} style={{ borderColor: '#ea4335', color: '#ea4335' }}>
+              <button className="view-btn" onClick={handleSendErrorAlert} style={{ borderColor: '#ea4335', color: '#ea4335', whiteSpace: 'nowrap' }}>
                 + Error Alert
               </button>
             </div>
@@ -302,7 +317,7 @@ export default function AdminDashboard() {
                         <div className="promo-card-title">
                           <span>{templateObj.title}</span>
                         </div>
-                        <div className="promo-card-row" style={{ color: '#25d366', fontWeight: 600 }}>
+                        <div className="promo-card-row" style={{ color: '#25d366', fontWeight: 700 }}>
                           ✅ {templateObj.subtitle}
                         </div>
                         <div className="promo-card-row">
@@ -316,7 +331,7 @@ export default function AdminDashboard() {
                           💰 {templateObj.points}
                         </div>
                         <div className="promo-card-divider" />
-                        <div className="promo-card-row" style={{ color: '#f7b731', fontWeight: 600 }}>
+                        <div className="promo-card-row" style={{ color: '#f7b731', fontWeight: 700 }}>
                           {templateObj.verifiedNotice}
                         </div>
                         {templateObj.verifiedSites && templateObj.verifiedSites.map((site, i) => (
@@ -331,7 +346,7 @@ export default function AdminDashboard() {
                       </div>
                     ) : msg.type === 'options' && optionsObj ? (
                       <div className="options-card">
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14.5px' }}>
                           {optionsObj.prompt}
                         </div>
                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
