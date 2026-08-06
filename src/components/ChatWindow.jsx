@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Phone, Video, Search, Smile, Paperclip, Send, Mic, Play, Pause, Check, CheckCheck } from 'lucide-react';
+import { Phone, Video, Search, Smile, Paperclip, Send, Mic, CheckCheck, Check, MoreVertical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 
@@ -12,16 +12,10 @@ export default function ChatWindow({ activeChat, contact, onStartCall, onOpenLig
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const messagesEndRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
-  const recordingIntervalRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   const isContactOnline = onlineUsers.has(contact.id) || contact.status === 'online';
 
-  // Fetch message history for active chat
   const fetchMessages = async () => {
     if (!activeChat) return;
     try {
@@ -31,7 +25,7 @@ export default function ChatWindow({ activeChat, contact, onStartCall, onOpenLig
         setMessages(data.messages);
       }
     } catch (err) {
-      console.error('Error fetching messages:', err);
+      console.error('Fetch messages error:', err);
     }
   };
 
@@ -39,52 +33,39 @@ export default function ChatWindow({ activeChat, contact, onStartCall, onOpenLig
     fetchMessages();
 
     if (socket && activeChat) {
-      // Mark unread messages as read
       socket.emit('mark_read', { chatId: activeChat.chatId, userId: user.id, senderId: contact.id });
 
-      const handleNewMessage = (msg) => {
+      const handleNewMsg = (msg) => {
         if (msg.chat_id === activeChat.chatId) {
           setMessages(prev => [...prev, msg]);
           socket.emit('mark_read', { chatId: activeChat.chatId, userId: user.id, senderId: contact.id });
         }
       };
 
-      const handleMessageSent = (msg) => {
+      const handleSentMsg = (msg) => {
         if (msg.chat_id === activeChat.chatId) {
           setMessages(prev => [...prev, msg]);
         }
       };
 
       const handleUserTyping = ({ chatId }) => {
-        if (chatId === activeChat.chatId) {
-          setIsTyping(true);
-        }
+        if (chatId === activeChat.chatId) setIsTyping(true);
       };
 
       const handleUserStopTyping = ({ chatId }) => {
-        if (chatId === activeChat.chatId) {
-          setIsTyping(false);
-        }
+        if (chatId === activeChat.chatId) setIsTyping(false);
       };
 
-      const handleMessagesReadUpdate = ({ chatId }) => {
-        if (chatId === activeChat.chatId) {
-          setMessages(prev => prev.map(m => ({ ...m, status: 'read' })));
-        }
-      };
-
-      socket.on('new_message', handleNewMessage);
-      socket.on('message_sent', handleMessageSent);
+      socket.on('new_message', handleNewMsg);
+      socket.on('message_sent', handleSentMsg);
       socket.on('user_typing', handleUserTyping);
       socket.on('user_stop_typing', handleUserStopTyping);
-      socket.on('messages_read_update', handleMessagesReadUpdate);
 
       return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('message_sent', handleMessageSent);
+        socket.off('new_message', handleNewMsg);
+        socket.off('message_sent', handleSentMsg);
         socket.off('user_typing', handleUserTyping);
         socket.off('user_stop_typing', handleUserStopTyping);
-        socket.off('messages_read_update', handleMessagesReadUpdate);
       };
     }
   }, [activeChat, socket]);
@@ -93,186 +74,161 @@ export default function ChatWindow({ activeChat, contact, onStartCall, onOpenLig
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Handle typing status emission
-  const handleInputChange = (e) => {
-    setInputText(e.target.value);
-    if (!socket || !activeChat) return;
-
-    socket.emit('typing', { chatId: activeChat.chatId, recipientId: contact.id, senderName: user.name });
-
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('stop_typing', { chatId: activeChat.chatId, recipientId: contact.id });
-    }, 1500);
-  };
-
-  // Send message
-  const handleSendMessage = () => {
-    if (!inputText.trim() || !socket || !activeChat) return;
+  const handleSendMessage = (textToSend) => {
+    const text = textToSend || inputText.trim();
+    if (!text || !socket || !activeChat) return;
 
     socket.emit('send_message', {
       chatId: activeChat.chatId,
       senderId: user.id,
       recipientId: contact.id,
-      text: inputText.trim(),
+      text: text,
       type: 'text'
     });
 
-    socket.emit('stop_typing', { chatId: activeChat.chatId, recipientId: contact.id });
-    setInputText('');
+    if (!textToSend) setInputText('');
     setShowEmojis(false);
   };
 
-  // Handle keydown Enter
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // Handle Image upload
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !activeChat || !socket) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.url) {
-        socket.emit('send_message', {
-          chatId: activeChat.chatId,
-          senderId: user.id,
-          recipientId: contact.id,
-          text: '',
-          type: 'image',
-          mediaUrl: data.url
-        });
-      }
-    } catch (err) {
-      console.error('Image upload error:', err);
-    }
-  };
-
-  // Handle Voice Recording simulation
-  const toggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setRecordingSeconds(0);
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingSeconds(prev => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(recordingIntervalRef.current);
-      setIsRecording(false);
-
-      if (socket && activeChat) {
-        const mins = Math.floor(recordingSeconds / 60);
-        const secs = recordingSeconds % 60;
-        const durationStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-
-        socket.emit('send_message', {
-          chatId: activeChat.chatId,
-          senderId: user.id,
-          recipientId: contact.id,
-          text: '',
-          type: 'audio',
-          duration: durationStr || '0:05'
-        });
-      }
-    }
+  const handleOptionClick = (optionText) => {
+    handleSendMessage(optionText);
   };
 
   return (
     <div className="chat-window">
-      {/* Header */}
-      <header className="chat-header">
-        <div className="chat-header-info">
+      {/* Header - Teal WhatsApp Support Header */}
+      <header className="support-header">
+        <div className="support-header-info">
           <img src={contact.avatar} alt={contact.name} className="avatar" />
-          <div className="chat-header-details">
-            <span className="chat-header-name">{contact.name}</span>
-            <span className={`chat-header-status ${isTyping || isContactOnline ? 'online' : ''}`}>
-              {isTyping ? 'typing...' : isContactOnline ? 'online' : 'offline'}
-            </span>
+          <div>
+            <div className="support-name">
+              {contact.name}
+              {contact.name.includes('Support') && (
+                <span className="verified-badge" title="Verified Support Account">✓</span>
+              )}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.85 }}>
+              {isTyping ? 'typing...' : isContactOnline ? 'online' : 'last seen today'}
+            </div>
           </div>
         </div>
 
-        <div className="header-icons">
-          <button className="icon-btn" title="Start Video Call" onClick={() => onStartCall('video')}>
-            <Video size={20} />
+        <div className="header-icons" style={{ color: 'white' }}>
+          <button className="icon-btn" style={{ color: 'white' }} title="Search">
+            <Search size={20} />
           </button>
-          <button className="icon-btn" title="Start Voice Call" onClick={() => onStartCall('voice')}>
+          <button className="icon-btn" style={{ color: 'white' }} title="Call" onClick={() => onStartCall('voice')}>
             <Phone size={20} />
           </button>
-          <button className="icon-btn" title="Search in Chat">
-            <Search size={20} />
+          <button className="icon-btn" style={{ color: 'white' }} title="Menu">
+            <MoreVertical size={20} />
           </button>
         </div>
       </header>
 
-      {/* Messages Flow */}
-      <div className="messages-container">
+      {/* Messages Container with WhatsApp Doodle background */}
+      <div className="messages-container doodle-bg">
         <div className="date-divider">Today</div>
 
         {messages.map((msg) => {
           const isOutgoing = msg.sender_id === user.id;
 
+          let templateObj = null;
+          if (msg.type === 'template' && msg.template_data) {
+            try { templateObj = JSON.parse(msg.template_data); } catch(e){}
+          }
+
+          let optionsObj = null;
+          if (msg.type === 'options' && msg.options_data) {
+            try { optionsObj = JSON.parse(msg.options_data); } catch(e){}
+          }
+
           return (
-            <div key={msg.id} className={`message ${isOutgoing ? 'outgoing' : 'incoming'}`}>
-              {msg.type === 'image' && (
-                <div className="message-image" onClick={() => onOpenLightbox(msg.media_url)}>
-                  <img src={msg.media_url} alt="Shared Photo" />
+            <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isOutgoing ? 'flex-end' : 'flex-start' }}>
+              {/* Rich Promo Card Template (Matching SS) */}
+              {msg.type === 'template' && templateObj ? (
+                <div className="promo-card">
+                  <div className="promo-card-title">
+                    <span>{templateObj.title}</span>
+                  </div>
+                  <div className="promo-card-row" style={{ color: '#25d366', fontWeight: 600 }}>
+                    ✅ {templateObj.subtitle}
+                  </div>
+                  <div className="promo-card-row">
+                    🌐 Official: <a href={`https://${templateObj.officialUrl}`} target="_blank" rel="noreferrer" className="promo-card-link">{templateObj.officialUrl}</a>
+                  </div>
+                  <div className="promo-card-row">
+                    📹 ID Guide: <a href={templateObj.guideUrl} target="_blank" rel="noreferrer" className="promo-card-link">{templateObj.guideUrl}</a>
+                  </div>
+                  <div className="promo-card-divider" />
+                  <div className="promo-card-row" style={{ whiteSpace: 'pre-line' }}>
+                    💰 {templateObj.points}
+                  </div>
+                  <div className="promo-card-divider" />
+                  <div className="promo-card-row" style={{ color: '#f7b731', fontWeight: 600 }}>
+                    {templateObj.verifiedNotice}
+                  </div>
+                  {templateObj.verifiedSites && templateObj.verifiedSites.map((site, i) => (
+                    <div key={i} className="promo-card-row">
+                      🌐 <a href={`https://${site}`} target="_blank" rel="noreferrer" className="promo-card-link">{site}</a>
+                    </div>
+                  ))}
+                  <div className="promo-card-divider" />
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {templateObj.footer}
+                  </div>
+                </div>
+              ) : msg.type === 'options' && optionsObj ? (
+                /* Interactive Choice Option Buttons Card (Matching SS) */
+                <div className="options-card">
+                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px' }}>
+                    {optionsObj.prompt}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    {optionsObj.hint}
+                  </div>
+                  {optionsObj.buttons && optionsObj.buttons.map((btnText, i) => (
+                    <button key={i} className="options-btn" onClick={() => handleOptionClick(btnText)}>
+                      {btnText}
+                    </button>
+                  ))}
+                </div>
+              ) : msg.type === 'alert' ? (
+                /* Error alert message bubble (Matching SS) */
+                <div className="error-alert-bubble">
+                  ⚠️ {msg.text}
+                </div>
+              ) : (
+                /* Standard Message Bubble */
+                <div className={`message ${isOutgoing ? 'outgoing' : 'incoming'}`}>
+                  {msg.text}
+                  <div className="message-meta">
+                    <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isOutgoing && <CheckCheck size={15} color="var(--tick-blue)" />}
+                  </div>
                 </div>
               )}
-
-              {msg.type === 'audio' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 0' }}>
-                  <button className="icon-btn" style={{ background: 'var(--accent)', color: '#fff' }}>
-                    <Play size={16} fill="white" />
-                  </button>
-                  <span style={{ fontSize: '13px', fontWeight: 500 }}>Voice Note ({msg.duration || '0:05'})</span>
-                </div>
-              )}
-
-              {msg.text && <div className="message-text">{msg.text}</div>}
-
-              <div className="message-meta">
-                <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                {isOutgoing && (
-                  msg.status === 'read' ? (
-                    <CheckCheck size={15} color="var(--tick-blue)" />
-                  ) : (
-                    <Check size={15} color="var(--text-muted)" />
-                  )
-                )}
-              </div>
             </div>
           );
         })}
 
         {isTyping && (
           <div className="message incoming" style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-            {contact.name} is typing...
+            Support is typing...
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Chat Input Bar */}
+      {/* Input Bar */}
       <footer className="chat-input-bar">
         {showEmojis && (
           <div className="emoji-popover">
             {EMOJIS.map((emoji, idx) => (
               <button 
                 key={idx} 
-                className="emoji-btn"
+                className="emoji-btn" 
                 onClick={() => { setInputText(prev => prev + emoji); setShowEmojis(false); }}
               >
                 {emoji}
@@ -281,53 +237,24 @@ export default function ChatWindow({ activeChat, contact, onStartCall, onOpenLig
           </div>
         )}
 
-        <button className="icon-btn" title="Emojis" onClick={() => setShowEmojis(!showEmojis)}>
-          <Smile size={22} />
+        <div className="input-box-wrapper">
+          <input 
+            type="text" 
+            className="input-box" 
+            placeholder="Message" 
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+          />
+        </div>
+
+        <button className="icon-btn" title="Attach" onClick={() => setShowEmojis(!showEmojis)}>
+          <Paperclip size={20} />
         </button>
 
-        <label className="icon-btn" title="Attach Image" style={{ cursor: 'pointer' }}>
-          <input 
-            type="file" 
-            ref={fileInputRef}
-            accept="image/*" 
-            style={{ display: 'none' }} 
-            onChange={handleImageUpload}
-          />
-          <Paperclip size={22} />
-        </label>
-
-        {isRecording ? (
-          <div className="input-box-wrapper" style={{ justifyContent: 'space-between', color: '#ea4335' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600 }}>🎙️ Recording Voice Note ({recordingSeconds}s)...</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Click Mic to Stop & Send</span>
-          </div>
-        ) : (
-          <div className="input-box-wrapper">
-            <input 
-              type="text" 
-              className="input-box" 
-              placeholder="Type a message"
-              value={inputText}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-            />
-          </div>
-        )}
-
-        {inputText.trim().length > 0 ? (
-          <button className="icon-btn" title="Send Message" onClick={handleSendMessage} style={{ color: 'var(--accent)' }}>
-            <Send size={22} />
-          </button>
-        ) : (
-          <button 
-            className="icon-btn" 
-            title={isRecording ? "Stop & Send Audio" : "Record Audio Note"} 
-            onClick={toggleRecording}
-            style={{ color: isRecording ? '#ea4335' : 'var(--icon-color)' }}
-          >
-            <Mic size={22} />
-          </button>
-        )}
+        <button className="send-circle-btn" onClick={() => handleSendMessage()}>
+          <Send size={20} />
+        </button>
       </footer>
     </div>
   );

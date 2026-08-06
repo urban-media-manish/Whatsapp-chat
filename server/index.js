@@ -28,7 +28,6 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
-// Uploads directory configuration
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -44,7 +43,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Store active socket connections: userId -> socketId
 const activeSockets = new Map();
 
 /* --- REST API ROUTES --- */
@@ -53,7 +51,7 @@ const activeSockets = new Map();
 app.post('/api/auth/register', async (req, res) => {
   try {
     const db = getDb();
-    const { username, password, name, avatar, about } = req.body;
+    const { username, password, name, phone, avatar, about } = req.body;
 
     if (!username || !password || !name) {
       return res.status(400).json({ error: 'Username, password and name are required' });
@@ -66,15 +64,60 @@ app.post('/api/auth/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const userAvatar = avatar || `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80`;
+    const userPhone = phone || `+91 ${Math.floor(6000000000 + Math.random() * 3999999999)}`;
 
     const result = await db.run(
-      'INSERT INTO users (username, password, name, avatar, about) VALUES (?, ?, ?, ?, ?)',
-      [username.toLowerCase().trim(), hashedPassword, name.trim(), userAvatar, about || 'Available | Using Realtime WhatsApp']
+      'INSERT INTO users (username, password, name, phone, avatar, about) VALUES (?, ?, ?, ?, ?, ?)',
+      [username.toLowerCase().trim(), hashedPassword, name.trim(), userPhone, userAvatar, about || 'Available | Using WhatsApp']
     );
 
-    const user = await db.get('SELECT id, username, name, avatar, about, status FROM users WHERE id = ?', [result.lastID]);
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+    const user = await db.get('SELECT id, username, name, phone, avatar, about, role, status FROM users WHERE id = ?', [result.lastID]);
 
+    // Auto-create chat with Support ✓ agent and send initial welcome template card
+    const supportUser = await db.get("SELECT id FROM users WHERE username = 'support'");
+    if (supportUser && user.id !== supportUser.id) {
+      const u1 = Math.min(user.id, supportUser.id);
+      const u2 = Math.max(user.id, supportUser.id);
+
+      const chatRes = await db.run(
+        'INSERT INTO chats (user1_id, user2_id, last_message, last_message_time) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+        [u1, u2, '🤝 BETBOSS99 | TRUSTED & SECURE 🤝']
+      );
+      const chatId = chatRes.lastID;
+
+      // Welcome Card Template
+      const templatePayload = JSON.stringify({
+        title: "🤝 BETBOSS99 | TRUSTED & SECURE 🤝",
+        subtitle: "100% Safe Platform",
+        officialUrl: "www.betboss99.com",
+        guideUrl: "https://vimeo.com/1109852737",
+        points: "1 Pt = ₹1 | Min ID ₹100 | Min Bet ₹100\n(Demo ID: \"Login With Demo\")",
+        verifiedNotice: "⚡ VERIFIED SITES (AUTO DEPOSIT & WITHDRAWAL)",
+        verifiedSites: ["betboss99.com", "reallotus365.ink"],
+        footer: "💎 24/7 Live Customer Support | Kheliye Bina Kisi Darr Ke! 💎"
+      });
+
+      const optionsPayload = JSON.stringify({
+        prompt: "Please select one site",
+        hint: "Tap any number below to continue",
+        buttons: ["1️⃣ Welcome To Real Lotus365"]
+      });
+
+      const now = new Date().toISOString();
+      await db.run(
+        `INSERT INTO messages (chat_id, sender_id, recipient_id, text, type, template_data, status, timestamp) 
+         VALUES (?, ?, ?, ?, 'template', ?, 'read', ?)`,
+        [chatId, supportUser.id, user.id, '🤝 BETBOSS99 | TRUSTED & SECURE 🤝', templatePayload, now]
+      );
+
+      await db.run(
+        `INSERT INTO messages (chat_id, sender_id, recipient_id, text, type, options_data, status, timestamp) 
+         VALUES (?, ?, ?, ?, 'options', ?, 'read', ?)`,
+        [chatId, supportUser.id, user.id, 'Please select one site', optionsPayload, now]
+      );
+    }
+
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
   } catch (err) {
     console.error('Register error:', err);
@@ -97,7 +140,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid username or password' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(password, user.password).catch(() => user.password === password);
     if (!validPassword) {
       return res.status(400).json({ error: 'Invalid username or password' });
     }
@@ -112,7 +155,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Get Current User Profile (Auth Check)
+// Me Profile
 app.get('/api/auth/me', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -122,7 +165,7 @@ app.get('/api/auth/me', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     const db = getDb();
-    const user = await db.get('SELECT id, username, name, avatar, about, status FROM users WHERE id = ?', [decoded.userId]);
+    const user = await db.get('SELECT id, username, name, phone, avatar, about, role, status FROM users WHERE id = ?', [decoded.userId]);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     res.json({ user });
@@ -139,11 +182,11 @@ app.get('/api/users/search', async (req, res) => {
     const currentUserId = req.query.userId;
 
     const users = await db.all(
-      `SELECT id, username, name, avatar, about, status, last_seen 
+      `SELECT id, username, name, phone, avatar, about, status, last_seen 
        FROM users 
-       WHERE (username LIKE ? OR name LIKE ?) AND id != ? 
+       WHERE (username LIKE ? OR name LIKE ? OR phone LIKE ?) AND id != ? 
        LIMIT 20`,
-      [`%${query}%`, `%${query}%`, currentUserId || 0]
+      [`%${query}%`, `%${query}%`, `%${query}%`, currentUserId || 0]
     );
 
     res.json({ users });
@@ -152,20 +195,20 @@ app.get('/api/users/search', async (req, res) => {
   }
 });
 
-// Get User Chats with latest messages
+// Get Chats
 app.get('/api/chats', async (req, res) => {
   try {
     const db = getDb();
     const userId = req.query.userId;
     if (!userId) return res.status(400).json({ error: 'userId parameter is required' });
 
-    // Retrieve all users the current user has exchanged messages with or created a chat with
     const chats = await db.all(
       `SELECT 
         c.id as chatId,
         u.id as contactId,
         u.name,
         u.username,
+        u.phone,
         u.avatar,
         u.about,
         u.status as userStatus,
@@ -187,7 +230,7 @@ app.get('/api/chats', async (req, res) => {
   }
 });
 
-// Create or Get Chat between two users
+// Create/Get Chat
 app.post('/api/chats', async (req, res) => {
   try {
     const db = getDb();
@@ -205,7 +248,7 @@ app.post('/api/chats', async (req, res) => {
       chat = await db.get('SELECT * FROM chats WHERE id = ?', [result.lastID]);
     }
 
-    const contact = await db.get('SELECT id, username, name, avatar, about, status, last_seen FROM users WHERE id = ?', [contactId]);
+    const contact = await db.get('SELECT id, username, name, phone, avatar, about, status, last_seen FROM users WHERE id = ?', [contactId]);
     res.json({ chat, contact });
   } catch (err) {
     console.error('Create chat error:', err);
@@ -213,7 +256,7 @@ app.post('/api/chats', async (req, res) => {
   }
 });
 
-// Get Messages for a specific Chat
+// Get Messages
 app.get('/api/messages/:chatId', async (req, res) => {
   try {
     const db = getDb();
@@ -234,19 +277,17 @@ app.get('/api/messages/:chatId', async (req, res) => {
   }
 });
 
-// Upload Media Attachment (Images / Audio)
+// Upload
 app.post('/api/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const fileUrl = `/uploads/${req.file.filename}`;
   res.json({ url: fileUrl });
 });
 
-/* --- SOCKET.IO REAL-TIME EVENT HANDLERS --- */
-
+/* --- SOCKET.IO REALTIME ENGINE --- */
 io.on('connection', (socket) => {
   console.log('⚡ Socket connected:', socket.id);
 
-  // User authenticates socket connection
   socket.on('user_online', async (userId) => {
     if (!userId) return;
     socket.userId = userId;
@@ -257,32 +298,40 @@ io.on('connection', (socket) => {
       await db.run("UPDATE users SET status = 'online' WHERE id = ?", [userId]);
       io.emit('user_status_change', { userId: Number(userId), status: 'online' });
     } catch (e) {
-      console.error('Update online status error:', e);
+      console.error('Online status error:', e);
     }
   });
 
-  // Real-time Message Sending
   socket.on('send_message', async (data) => {
-    const { chatId, senderId, recipientId, text, type, mediaUrl, duration } = data;
+    const { chatId, senderId, recipientId, text, type, mediaUrl, duration, templateData, optionsData } = data;
 
     try {
       const db = getDb();
       const timeNow = new Date().toISOString();
 
-      // Check if recipient is online
       const recipientSocketId = activeSockets.get(Number(recipientId));
       const initialStatus = recipientSocketId ? 'delivered' : 'sent';
 
-      // Insert message into SQLite
       const result = await db.run(
-        `INSERT INTO messages (chat_id, sender_id, recipient_id, text, type, media_url, duration, status, timestamp) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [chatId, senderId, recipientId, text || '', type || 'text', mediaUrl || '', duration || '', initialStatus, timeNow]
+        `INSERT INTO messages (chat_id, sender_id, recipient_id, text, type, media_url, duration, template_data, options_data, status, timestamp) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          chatId, 
+          senderId, 
+          recipientId, 
+          text || '', 
+          type || 'text', 
+          mediaUrl || '', 
+          duration || '', 
+          templateData ? JSON.stringify(templateData) : '', 
+          optionsData ? JSON.stringify(optionsData) : '', 
+          initialStatus, 
+          timeNow
+        ]
       );
 
-      const msgId = result.lastID;
       const formattedMsg = {
-        id: msgId,
+        id: result.lastID,
         chat_id: chatId,
         sender_id: senderId,
         recipient_id: recipientId,
@@ -290,30 +339,25 @@ io.on('connection', (socket) => {
         type: type || 'text',
         media_url: mediaUrl || '',
         duration: duration || '',
+        template_data: templateData ? JSON.stringify(templateData) : '',
+        options_data: optionsData ? JSON.stringify(optionsData) : '',
         status: initialStatus,
         timestamp: timeNow
       };
 
-      // Update chat last message
-      const displaySnippet = type === 'image' ? '📷 Photo' : type === 'audio' ? '🎵 Voice Note' : text;
-      await db.run(
-        `UPDATE chats SET last_message = ?, last_message_time = ? WHERE id = ?`,
-        [displaySnippet, timeNow, chatId]
-      );
+      const snippet = type === 'image' ? '📷 Photo' : type === 'audio' ? '🎵 Voice Note' : text;
+      await db.run('UPDATE chats SET last_message = ?, last_message_time = ? WHERE id = ?', [snippet, timeNow, chatId]);
 
-      // Emit back to sender (confirming message created)
       socket.emit('message_sent', formattedMsg);
 
-      // Deliver to recipient in real-time if online
       if (recipientSocketId) {
         io.to(recipientSocketId).emit('new_message', formattedMsg);
       }
     } catch (err) {
-      console.error('Socket send_message error:', err);
+      console.error('Send message socket error:', err);
     }
   });
 
-  // Typing Indicators
   socket.on('typing', ({ chatId, recipientId, senderName }) => {
     const recipientSocketId = activeSockets.get(Number(recipientId));
     if (recipientSocketId) {
@@ -328,7 +372,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Mark Messages as Read
   socket.on('mark_read', async ({ chatId, userId, senderId }) => {
     try {
       const db = getDb();
@@ -346,29 +389,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Call Signaling (Video / Voice call simulation between 2 users)
-  socket.on('call_user', ({ userToCall, signalData, from, callerName, callerAvatar, callType }) => {
-    const recipientSocketId = activeSockets.get(Number(userToCall));
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit('incoming_call', { signal: signalData, from, callerName, callerAvatar, callType });
-    }
-  });
-
-  socket.on('answer_call', (data) => {
-    const callerSocketId = activeSockets.get(Number(data.to));
-    if (callerSocketId) {
-      io.to(callerSocketId).emit('call_accepted', data.signal);
-    }
-  });
-
-  socket.on('end_call', ({ to }) => {
-    const recipientSocketId = activeSockets.get(Number(to));
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit('call_ended');
-    }
-  });
-
-  // Handle disconnect
   socket.on('disconnect', async () => {
     if (socket.userId) {
       activeSockets.delete(Number(socket.userId));
@@ -381,14 +401,12 @@ io.on('connection', (socket) => {
         console.error('Disconnect status error:', e);
       }
     }
-    console.log('❌ Socket disconnected:', socket.id);
   });
 });
 
-// Start Server & Initialize Database
 const PORT = process.env.PORT || 5000;
 initDb().then(() => {
   server.listen(PORT, () => {
-    console.log(`🚀 Realtime WhatsApp Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Realtime WhatsApp Support Server running on http://localhost:${PORT}`);
   });
 });

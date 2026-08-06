@@ -27,8 +27,10 @@ export async function initDb() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       name TEXT NOT NULL,
+      phone TEXT DEFAULT '',
       avatar TEXT,
-      about TEXT DEFAULT 'Available | Using Realtime WhatsApp',
+      about TEXT DEFAULT 'Available | WhatsApp Support',
+      role TEXT DEFAULT 'user',
       status TEXT DEFAULT 'offline',
       last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -61,6 +63,8 @@ export async function initDb() {
       type TEXT DEFAULT 'text',
       media_url TEXT DEFAULT '',
       duration TEXT DEFAULT '',
+      template_data TEXT DEFAULT '',
+      options_data TEXT DEFAULT '',
       status TEXT DEFAULT 'sent',
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (chat_id) REFERENCES chats (id),
@@ -69,13 +73,25 @@ export async function initDb() {
     );
   `);
 
-  console.log('✅ SQLite Database initialized successfully at:', dbPath);
+  // Ensure default Support Account exists
+  const supportUser = await db.get("SELECT id FROM users WHERE username = 'support'");
+  if (!supportUser) {
+    await db.run(
+      `INSERT INTO users (username, password, name, phone, avatar, about, role, status) 
+       VALUES ('support', 'support123', 'Support ✓', '+91 98765 43210', 
+       'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=250&q=80', 
+       '24/7 Live Customer Support', 'admin', 'online')`
+    );
+    console.log('✅ Support Agent Account Created!');
+  }
+
+  console.log('✅ SQLite Database initialized successfully!');
   return db;
 }
 
 export function getDb() {
   if (!db) {
-    throw new Error('Database not initialized! Call initDb() first.');
+    throw new Error('Database not initialized!');
   }
   return db;
 }
