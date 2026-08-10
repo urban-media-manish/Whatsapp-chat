@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, MessageSquare, BarChart2, LogOut, Pin, Trash2 } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -10,6 +11,19 @@ interface AdminSidebarProps {
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelectTab }) => {
   const { user, logout, setStatus } = useAuthStore();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const {
     conversations,
     activeConversation,
@@ -67,25 +81,59 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
         <div className="flex flex-col items-center gap-4">
           <ThemeToggle />
 
-          {/* User Status Avatar */}
-          <div className="relative group cursor-pointer">
-            <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-              alt={user?.name}
-              className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500"
-            />
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#202c33]" />
+          {/* User Status Avatar & Click Menu */}
+          <div ref={menuRef} className="relative cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu((p) => !p)}
+              className="relative focus:outline-none block"
+              title="Profile & Logout Options"
+            >
+              <img
+                src={user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                alt={user?.name}
+                className="w-10 h-10 rounded-full object-cover border-2 border-emerald-500 hover:scale-105 transition-transform shadow-md"
+              />
+              <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#202c33]" />
+            </button>
 
-            {/* Quick Status Dropdown Hover */}
-            <div className="absolute bottom-0 left-14 hidden group-hover:flex flex-col bg-[#202c33] border border-gray-700/80 rounded-xl p-2 shadow-2xl z-50 w-36">
-              <span className="text-[10px] font-bold text-gray-400 uppercase px-2 py-1">{user?.name} ({user?.role})</span>
-              <button onClick={() => setStatus('online')} className="text-xs text-emerald-400 p-1.5 hover:bg-white/10 rounded text-left">🟢 Online</button>
-              <button onClick={() => setStatus('busy')} className="text-xs text-amber-400 p-1.5 hover:bg-white/10 rounded text-left">🟡 Busy</button>
-              <button onClick={() => setStatus('offline')} className="text-xs text-gray-400 p-1.5 hover:bg-white/10 rounded text-left">⚪ Offline</button>
-              <button onClick={logout} className="text-xs text-red-400 p-1.5 hover:bg-red-500/10 rounded text-left flex items-center gap-1 border-t border-gray-700 mt-1">
-                <LogOut className="w-3.5 h-3.5" /> Logout
-              </button>
-            </div>
+            {/* Stable Click Dropdown Menu */}
+            {showProfileMenu && (
+              <div className="absolute bottom-0 left-14 flex flex-col bg-[#202c33] border border-gray-700/80 rounded-2xl p-2.5 shadow-2xl z-50 w-44 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-2 py-1 mb-1 border-b border-gray-700/60">
+                  <p className="text-xs font-bold text-gray-200 truncate">{user?.name}</p>
+                  <p className="text-[10px] text-emerald-400 capitalize">{user?.role || 'Support Executive'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setStatus('online'); setShowProfileMenu(false); }}
+                  className="text-xs text-emerald-400 p-2 hover:bg-white/10 rounded-xl text-left font-medium transition-colors"
+                >
+                  🟢 Online
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStatus('busy'); setShowProfileMenu(false); }}
+                  className="text-xs text-amber-400 p-2 hover:bg-white/10 rounded-xl text-left font-medium transition-colors"
+                >
+                  🟡 Busy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStatus('offline'); setShowProfileMenu(false); }}
+                  className="text-xs text-gray-400 p-2 hover:bg-white/10 rounded-xl text-left font-medium transition-colors"
+                >
+                  ⚪ Offline
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowProfileMenu(false); logout(); }}
+                  className="text-xs text-red-400 p-2 hover:bg-red-500/10 rounded-xl text-left flex items-center gap-2 border-t border-gray-700/60 mt-1 font-bold transition-colors"
+                >
+                  <LogOut className="w-4 h-4 text-red-400" /> Logout Workspace
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
