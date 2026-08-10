@@ -1,29 +1,59 @@
-export const setupSocket = (io) => {
-  // Store connected users / socket mappings
-  const onlineAgents = new Map(); // userId -> socketId
-  const onlineCustomers = new Map(); // customerId/sessionId -> socketId
+// Socket presence & Real-time WhatsApp tick tracker
+export const onlineAgents = new Map(); // userId -> socketId
+export const onlineCustomers = new Map(); // customerId/sessionId -> socketId
+export const activeChatRooms = new Map(); // socketId -> conversationId
 
+export const setupSocket = (io) => {
   io.on('connection', (socket) => {
     console.log(`🔌 New Socket Connection: ${socket.id}`);
-
-    // Join conversation room
-    socket.on('join_conversation', ({ conversationId, role, userId }) => {
-      socket.join(`conv_${conversationId}`);
-      console.log(`👤 Socket ${socket.id} (${role}) joined conv_${conversationId}`);
-
-      if (role === 'agent') {
-        onlineAgents.set(userId, socket.id);
-        io.emit('agent_status_change', { userId, status: 'online' });
-      } else if (role === 'customer') {
-        onlineCustomers.set(userId, socket.id);
-        io.emit('customer_presence', { customerId: userId, status: 'online' });
-      }
-    });
 
     // Join Agent global admin stream
     socket.on('join_agent_workspace', ({ userId }) => {
       socket.join('agent_workspace_room');
       onlineAgents.set(userId, socket.id);
+      console.log(`🟢 Agent ${userId} is ONLINE (Socket: ${socket.id})`);
+      io.emit('agent_presence', { status: 'online', onlineCount: onlineAgents.size });
+    });
+
+    // Join specific conversation room (Chat opened on screen)
+    socket.on('join_conversation', async ({ conversationId, role, userId }) => {
+      socket.join(`conv_${conversationId}`);
+      activeChatRooms.set(socket.id, conversationId);
+      console.log(`👤 Socket ${socket.id} (${role}) joined & opened conv_${conversationId}`);
+
+      if (role === 'agent' && userId) {
+        onlineAgents.set(userId, socket.id);
+      } else if (role === 'customer' && userId) {
+        onlineCustomers.set(userId, socket.id);
+      }
+
+      // Automatically mark all messages as READ when room is opened
+      try {
+        const Message = (await import('../models/Message.js')).default;
+        const Conversation = (await import('../models/Conversation.js')).default;
+
+        await Message.updateMany(
+          { conversation: conversationId, status: { $ne: 'read' } },
+          { $set: { status: 'read' } }
+        );
+
+        if (role === 'agent') {
+          await Conversation.findByIdAndUpdate(conversationId, { unreadCount: 0 });
+        } else if (role === 'customer') {
+          await Conversation.findByIdAndUpdate(conversationId, { unreadCountCustomer: 0 });
+        }
+
+        io.emit('messages_read_ack', { conversationId, readerType: role });
+      } catch (err) {
+        console.error('Error marking messages read on room join:', err);
+      }
+    });
+
+    // Leave specific conversation room (Chat closed on screen)
+    socket.on('leave_conversation', ({ conversationId }) => {
+      socket.leave(`conv_${conversationId}`);
+      activeChatRooms.delete(socket.id);
+      console.log(`👤 Socket ${socket.id} closed & left conv_${conversationId}`);
     });
 
     // Typing Status Broadcasting
@@ -44,13 +74,74 @@ export const setupSocket = (io) => {
       });
     });
 
-    // Real-time message dispatch
-    socket.on('send_message', (messageData) => {
-      // Broadcast message to everyone in conversation room except sender
-      socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);
+    // Real-time message dispatch & Tick status evaluation
+    socket.on('send_message', async (messageData) => {
+      try {
+        const Message = (await import('../models/Message.js')).default;
+        let finalStatus = messageData.status || 'sent';
 
-      // Broadcast update to global agent workspace list (for sidebar unread badges and live updates)
-      io.to('agent_workspace_room').emit('conversation_activity', messageData);
+        if (messageData.senderType === 'customer') {
+          // Customer sent message -> evaluate Agent presence & active room
+          const isAnyAgentOnline = onlineAgents.size > 0;
+
+          if (!isAnyAgentOnline) {
+            // Agent Offline -> Single Gray Tick (sent)
+            finalStatus = 'sent';
+          } else {
+            // Agent Online -> Check if an AGENT socket has THIS conversation open on screen
+            let isAgentInThisRoom = false;
+            const agentSocketIds = new Set(onlineAgents.values());
+            for (const [sId, convId] of activeChatRooms.entries()) {
+              if (convId === messageData.conversation && agentSocketIds.has(sId)) {
+                isAgentInThisRoom = true;
+                break;
+              }
+            }
+
+            if (isAgentInThisRoom) {
+              // Agent is viewing this chat -> Double Blue Cyan Tick (read)
+              finalStatus = 'read';
+            } else {
+              // Agent is online but chat is not open -> Double Gray Tick (delivered)
+              finalStatus = 'delivered';
+            }
+          }
+        } else if (messageData.senderType === 'agent') {
+          // Agent sent message -> evaluate Customer presence
+          let isCustomerInThisRoom = false;
+          const customerSocketIds = new Set(onlineCustomers.values());
+          for (const [sId, convId] of activeChatRooms.entries()) {
+            if (convId === messageData.conversation && customerSocketIds.has(sId)) {
+              isCustomerInThisRoom = true;
+              break;
+            }
+          }
+
+          if (isCustomerInThisRoom) {
+            finalStatus = 'read';
+          } else {
+            finalStatus = 'delivered';
+          }
+        }
+
+        // Update DB status if changed
+        if (messageData._id && finalStatus !== messageData.status) {
+          await Message.findByIdAndUpdate(messageData._id, { status: finalStatus });
+          messageData.status = finalStatus;
+        }
+
+        // Broadcast message to everyone in conversation room except sender
+        socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);
+
+        // Notify sender of status update (Single tick / Double tick / Blue tick)
+        socket.emit('message_status_update', { messageId: messageData._id, status: finalStatus, conversationId: messageData.conversation });
+
+        // Broadcast update to global agent workspace list
+        io.to('agent_workspace_room').emit('conversation_activity', messageData);
+      } catch (err) {
+        console.error('Error evaluating message tick status:', err);
+        socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);
+      }
     });
 
     // Reaction update
@@ -58,14 +149,51 @@ export const setupSocket = (io) => {
       io.to(`conv_${conversationId}`).emit('reaction_updated', { messageId, reactions });
     });
 
-    // Read receipt
-    socket.on('mark_read', ({ conversationId, readerType }) => {
-      io.to(`conv_${conversationId}`).emit('messages_read_ack', { conversationId, readerType });
+    // Explicit Read receipt (Blue Ticks)
+    socket.on('mark_read', async ({ conversationId, readerType }) => {
+      try {
+        const Message = (await import('../models/Message.js')).default;
+        const Conversation = (await import('../models/Conversation.js')).default;
+
+        await Message.updateMany(
+          { conversation: conversationId, status: { $ne: 'read' } },
+          { $set: { status: 'read' } }
+        );
+
+        if (readerType === 'agent') {
+          await Conversation.findByIdAndUpdate(conversationId, { unreadCount: 0 });
+        } else if (readerType === 'customer') {
+          await Conversation.findByIdAndUpdate(conversationId, { unreadCountCustomer: 0 });
+        }
+
+        io.emit('messages_read_ack', { conversationId, readerType });
+      } catch (err) {
+        console.error('Error updating read status:', err);
+      }
     });
 
     // Disconnect
     socket.on('disconnect', () => {
       console.log(`❌ Socket Disconnected: ${socket.id}`);
+      
+      // Clean up maps
+      for (const [uId, sId] of onlineAgents.entries()) {
+        if (sId === socket.id) {
+          onlineAgents.delete(uId);
+          console.log(`🔴 Agent ${uId} is OFFLINE`);
+          io.emit('agent_presence', { status: 'offline', onlineCount: onlineAgents.size });
+          break;
+        }
+      }
+
+      for (const [cId, sId] of onlineCustomers.entries()) {
+        if (sId === socket.id) {
+          onlineCustomers.delete(cId);
+          break;
+        }
+      }
+
+      activeChatRooms.delete(socket.id);
     });
   });
 };

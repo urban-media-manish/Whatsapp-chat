@@ -1,6 +1,7 @@
 import express from 'express';
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
+import { onlineAgents, activeChatRooms } from '../socket/index.js';
 
 const router = express.Router();
 
@@ -8,6 +9,7 @@ const router = express.Router();
 router.get('/:conversationId', async (req, res) => {
   try {
     const { conversationId } = req.params;
+
     const messages = await Message.find({ conversation: conversationId })
       .populate('replyTo')
       .sort({ createdAt: 1 });
@@ -47,6 +49,24 @@ router.post('/', async (req, res) => {
       }
     }
 
+    let initialStatus = 'sent';
+    if (senderType === 'customer') {
+      const isAgentOnline = onlineAgents.size > 0;
+      if (isAgentOnline) {
+        let isAgentInThisRoom = false;
+        const agentSocketIds = new Set(onlineAgents.values());
+        for (const [sId, convId] of activeChatRooms.entries()) {
+          if (convId === conversationId && agentSocketIds.has(sId)) {
+            isAgentInThisRoom = true;
+            break;
+          }
+        }
+        initialStatus = isAgentInThisRoom ? 'read' : 'delivered';
+      } else {
+        initialStatus = 'sent';
+      }
+    }
+
     const message = await Message.create({
       conversation: conversationId,
       senderType,
@@ -60,7 +80,7 @@ router.post('/', async (req, res) => {
       mimeType: mimeType || '',
       replyTo: replyToId || null,
       replyToSnippet,
-      status: 'sent'
+      status: initialStatus
     });
 
     // Update conversation lastMessage & unread counts

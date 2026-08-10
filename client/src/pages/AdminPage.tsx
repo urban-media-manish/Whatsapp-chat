@@ -36,6 +36,21 @@ export const AdminPage: React.FC = () => {
     setShowContextPanel(false);
   }, [activeConversation?._id]);
 
+  // Press Escape (Esc) key to close active chat (WhatsApp Web shortcut)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        useChatStore.getState().setActiveConversation(null);
+        setShowContextPanel(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   useEffect(() => {
     socket.on('receive_message', (msg: Message) => {
       addMessage(msg);

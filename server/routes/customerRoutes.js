@@ -18,10 +18,38 @@ router.post('/init', async (req, res) => {
       customer = await Customer.findOne({ sessionId });
     }
 
+    // Lookup customer by Phone number or Name if sessionId not found
+    if (!customer) {
+      const searchConditions = [];
+      if (phone && phone.trim() !== '') {
+        const cleanPhone = phone.trim();
+        const digitsOnly = cleanPhone.replace(/\D/g, '');
+        searchConditions.push({ phone: cleanPhone });
+        if (digitsOnly.length >= 6) {
+          searchConditions.push({ phone: new RegExp(digitsOnly + '$', 'i') });
+        }
+      }
+      if (name && name.trim() !== '') {
+        const cleanName = name.trim();
+        const firstName = cleanName.split(' ')[0];
+        searchConditions.push({ name: new RegExp('^' + firstName, 'i') });
+      }
+
+      if (searchConditions.length > 0) {
+        customer = await Customer.findOne({ $or: searchConditions });
+        if (customer) {
+          if (name && name.trim() !== '') customer.name = name.trim();
+          if (phone && phone.trim() !== '') customer.phone = phone.trim();
+          customer.lastSeen = new Date();
+          await customer.save();
+        }
+      }
+    }
+
     if (!customer) {
       sessionId = sessionId || uuidv4();
       const defaultName = isGuest ? `Guest_${Math.floor(1000 + Math.random() * 9000)}` : (name || 'Anonymous User');
-      const defaultPhone = phone || `+1 (${Math.floor(100 + Math.random() * 899)}) ${Math.floor(100 + Math.random() * 899)}-${Math.floor(1000 + Math.random() * 8999)}`;
+      const defaultPhone = phone ? phone.trim() : `+1 (${Math.floor(100 + Math.random() * 899)}) ${Math.floor(100 + Math.random() * 899)}-${Math.floor(1000 + Math.random() * 8999)}`;
 
       customer = await Customer.create({
         sessionId,

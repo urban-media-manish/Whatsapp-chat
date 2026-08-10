@@ -59,11 +59,26 @@
   background: rgba(134, 150, 160, 0.6);
 }
 
-/* WhatsApp Wallpaper Pattern Overlay */
+/* WhatsApp Light & Dark Wallpaper Pattern Overlay */
 .chat-wallpaper {
-  background-color: var(--bg-chat);
-  background-image: radial-gradient(rgba(0, 168, 132, 0.04) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-color: #0b141a !important;
+  background-image: url("/whatsapp-dark-bg.svg?v=10") !important;
+  background-repeat: repeat !important;
+  background-size: 412px 412px !important;
+}
+
+html:not(.dark) .chat-wallpaper {
+  background-color: #efeae2 !important;
+  background-image: url("/whatsapp-light-bg.svg?v=10") !important;
+  background-repeat: repeat !important;
+  background-size: 412px 412px !important;
+}
+
+html.dark .chat-wallpaper {
+  background-color: #0b141a !important;
+  background-image: url("/whatsapp-dark-bg.svg?v=10") !important;
+  background-repeat: repeat !important;
+  background-size: 412px 412px !important;
 }
 
 /* Glassmorphism & Cards */

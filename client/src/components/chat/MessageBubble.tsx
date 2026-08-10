@@ -13,6 +13,36 @@ interface MessageBubbleProps {
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
+const renderFormattedText = (content: string) => {
+  if (!content) return null;
+
+  // Regex to match URLs like http://, https://, www., or domain.tld (e.g. reallotus365.ink)
+  const urlRegex = /((?:https?:\/\/|www\.)[^\s]+|[a-zA-Z0-9-]+\.[a-zA-Z]{2,6}(?:\/[^\s]*)?)/gi;
+  const parts = content.split(urlRegex);
+
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      let href = part;
+      if (!href.startsWith('http://') && !href.startsWith('https://')) {
+        href = 'https://' + href;
+      }
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#027eb5] dark:text-[#53bdeb] font-semibold underline hover:underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUserId, isAgentView }) => {
   const { setReplyToMessage } = useChatStore();
   const [showReactors, setShowReactors] = useState(false);
@@ -61,15 +91,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
   if (isSystem) {
     return (
       <div className="flex justify-center my-3">
-        <div className="bg-black/10 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-[11px] font-medium px-4 py-1.5 rounded-xl text-center shadow-sm max-w-md">
+        <div className="bg-[#ffeecd] dark:bg-[#182229] text-[#111b21] dark:text-[#e9edef] border border-amber-300/40 dark:border-gray-700/60 text-xs font-semibold px-4 py-2 rounded-xl text-center shadow-sm max-w-md leading-relaxed select-text">
           {message.content}
         </div>
       </div>
     );
   }
 
+  const senderInitial = message.senderName ? message.senderName.charAt(0).toUpperCase() : (isSentByMe ? 'U' : 'A');
+
   return (
-    <div className={`flex w-full mb-2 ${isSentByMe ? 'justify-end' : 'justify-start'} group`}>
+    <div className={`flex w-full mb-3.5 ${isSentByMe ? 'justify-end' : 'justify-start'} group items-start`}>
+
+      {/* Received Avatar (Left side of bubble) */}
+      {!isSentByMe && (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 mr-2 mt-0.5 shadow-sm">
+          {senderInitial}
+        </div>
+      )}
 
       {/* ── Action buttons LEFT of bubble (for sent/my messages) ── */}
       {isSentByMe && (
@@ -99,24 +138,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
 
       {/* ── Bubble ── */}
       <div
-        style={{ maxWidth: '65%', minWidth: 0 }}
-        className={`relative rounded-2xl px-3.5 py-2 shadow-sm break-words ${
+        style={{ maxWidth: '70%', minWidth: '120px' }}
+        className={`relative rounded-2xl px-3.5 py-2 shadow-xs break-words ${
           isSentByMe
             ? 'bg-[#d9fdd3] dark:bg-[#005c4b] text-gray-900 dark:text-gray-100 rounded-tr-none'
             : 'bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 rounded-tl-none border border-black/5 dark:border-white/5'
         }`}
       >
-        {/* Sender Label */}
+        {/* Quick Reactions Floating Popover */}
+        {showReactors && (
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 bg-white dark:bg-[#202c33] px-2.5 py-1.5 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 animate-in fade-in zoom-in-90 duration-150">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => handleReact(emoji)}
+                className="text-base hover:scale-130 transition-transform p-0.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Sender Name Label */}
         {!isSentByMe && (
-          <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mb-0.5">
+          <p className="text-[11px] font-bold text-[#00a884] dark:text-[#00a884] mb-1">
             {message.senderName || 'Support Agent'}
           </p>
         )}
 
         {/* Quoted Reply Snippet */}
         {message.replyToSnippet && (
-          <div className="mb-1.5 p-2 rounded-lg bg-black/5 dark:bg-black/20 border-l-4 border-emerald-500 text-xs">
-            <p className="font-semibold text-emerald-700 dark:text-emerald-400 text-[10px]">
+          <div className="mb-1.5 p-2 rounded-lg bg-black/5 dark:bg-black/20 border-l-4 border-[#00a884] text-xs">
+            <p className="font-semibold text-[#00a884] text-[10px]">
               {message.replyToSnippet.senderName}
             </p>
             <p className="truncate text-gray-600 dark:text-gray-300 text-[11px]">
@@ -142,31 +195,31 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
               type="text"
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
-              className="w-full bg-white dark:bg-black/30 border border-emerald-500 rounded px-2 py-1 text-xs outline-none"
+              className="w-full bg-white dark:bg-black/30 border border-[#00a884] rounded px-2 py-1 text-xs outline-none"
             />
             <div className="flex gap-2 mt-1 justify-end">
               <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-500 hover:underline">Cancel</button>
-              <button onClick={handleSaveEdit} className="text-[10px] text-emerald-600 font-bold hover:underline">Save</button>
+              <button onClick={handleSaveEdit} className="text-[10px] text-[#00a884] font-bold hover:underline">Save</button>
             </div>
           </div>
         ) : (
-          <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed" style={{ overflowWrap: 'anywhere' }}>
-            {message.content}
+          <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-text" style={{ overflowWrap: 'anywhere' }}>
+            {renderFormattedText(message.content)}
             {message.isEdited && <span className="text-[9px] text-gray-400 ml-1 italic">(edited)</span>}
           </p>
         )}
 
         {/* Timestamp & Status Ticks */}
-        <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#667781] dark:text-[#8696a0]">
           <span>{formattedTime}</span>
           {isSentByMe && (
             <span>
               {message.status === 'read' ? (
-                <CheckCheck className="w-3.5 h-3.5 text-sky-400 inline" />
+                <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] inline" />
               ) : message.status === 'delivered' ? (
-                <CheckCheck className="w-3.5 h-3.5 text-gray-400 inline" />
+                <CheckCheck className="w-3.5 h-3.5 text-[#8696a0] inline" />
               ) : (
-                <Check className="w-3.5 h-3.5 text-gray-400 inline" />
+                <Check className="w-3.5 h-3.5 text-[#8696a0] inline" />
               )}
             </span>
           )}
@@ -205,6 +258,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
             <Smile className="w-3.5 h-3.5" />
           </button>
+        </div>
+      )}
+
+      {/* Sent Avatar (Right side of bubble) */}
+      {isSentByMe && (
+        <div className="w-8 h-8 rounded-full bg-[#00a884] text-white font-bold flex items-center justify-center text-xs flex-shrink-0 ml-2 mt-0.5 shadow-sm">
+          {senderInitial}
         </div>
       )}
 

@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Smile, Paperclip, Mic, Send, Image, FileText, Music, X, Zap } from 'lucide-react';
+import { Smile, Paperclip, Mic, Send, Image, FileText, Music, X, Zap, Camera } from 'lucide-react';
 import { EmojiPickerModal } from './EmojiPickerModal';
 import { VoiceRecorder } from './VoiceRecorder';
 import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { useChatStore } from '../../store/useChatStore';
+import { sounds } from '../../utils/audio';
 
 interface MessageInputProps {
   conversationId: string;
@@ -32,6 +33,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const socket = getSocket();
 
   useEffect(() => {
@@ -75,6 +77,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       addMessage(msg);
       socket.emit('send_message', msg);
+      sounds.playSent();
       setReplyToMessage(null);
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -122,6 +125,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
     }
   };
 
@@ -160,14 +164,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }
 
   return (
-    <div className="relative bg-[#f0f2f5] dark:bg-[#202c33] px-4 py-3 border-t border-gray-200 dark:border-gray-700/60 flex flex-col gap-2">
-      {/* Hidden File Input */}
+    <div className="relative bg-[#f0f2f5] dark:bg-[#202c33] px-3 py-2 border-t border-gray-200/80 dark:border-gray-700/60 flex flex-col gap-2 select-none w-full">
+      {/* Hidden File Inputs */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileUpload}
         className="hidden"
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.zip"
+      />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        onChange={handleFileUpload}
+        className="hidden"
+        accept="image/*"
+        capture="environment"
       />
 
       {/* Quoted Reply Banner */}
@@ -210,24 +222,33 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Attachment Options Menu */}
       {showAttachMenu && (
-        <div className="absolute bottom-16 left-12 z-40 bg-white dark:bg-[#233138] p-3 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2 min-w-[180px]">
+        <div className="absolute bottom-16 left-12 z-40 bg-white dark:bg-[#233138] p-3 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2 min-w-[190px] animate-in fade-in slide-in-from-bottom-2 duration-150">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
           >
             <div className="p-2 rounded-full bg-purple-500 text-white"><Image className="w-4 h-4" /></div> Photos & Videos
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
           >
             <div className="p-2 rounded-full bg-blue-500 text-white"><FileText className="w-4 h-4" /></div> PDF Document
           </button>
           <button
-            onClick={() => setIsRecordingVoice(true)}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            onClick={() => cameraInputRef.current?.click()}
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
           >
-            <div className="p-2 rounded-full bg-red-500 text-white"><Music className="w-4 h-4" /></div> Voice Note
+            <div className="p-2 rounded-full bg-rose-500 text-white"><Camera className="w-4 h-4" /></div> Camera Photo
+          </button>
+          <button
+            onClick={() => {
+              setShowAttachMenu(false);
+              setIsRecordingVoice(true);
+            }}
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+          >
+            <div className="p-2 rounded-full bg-amber-500 text-white"><Music className="w-4 h-4" /></div> Voice Note
           </button>
         </div>
       )}
@@ -240,45 +261,67 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         />
       )}
 
-      {/* Main Input Row */}
-      <div className="flex items-center gap-2">
+      {/* Main WhatsApp Input Row */}
+      <div className="flex items-center gap-2 w-full">
+        {/* Emoji Button (Left side of input pill) */}
         <button
+          type="button"
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+          className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
+          title="Emoji"
         >
-          <Smile className="w-5 h-5" />
+          <Smile className="w-6 h-6" />
         </button>
 
-        <button
-          onClick={() => setShowAttachMenu(!showAttachMenu)}
-          className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
-        >
-          <Paperclip className="w-5 h-5" />
-        </button>
-
-        <div className="flex-1 relative">
+        {/* Input Capsule Box */}
+        <div className="flex-1 flex items-center bg-white dark:bg-[#2a3942] rounded-full px-4 py-2 border border-transparent focus-within:ring-1 focus-within:ring-[#00a884]/30 shadow-xs min-w-0 transition-all">
           <input
             type="text"
             value={text}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || (isAgentView ? "Type a reply or '/' for templates..." : "Type your message...")}
-            className="w-full bg-white dark:bg-[#2a3942] text-gray-900 dark:text-gray-100 placeholder-gray-400 rounded-xl px-4 py-2.5 text-sm outline-none border border-transparent focus:border-[#00a884] transition-colors"
+            placeholder={placeholder || "Type your message..."}
+            className="w-full bg-transparent text-gray-900 dark:text-[#e9edef] placeholder-gray-500 dark:placeholder-[#8696a0] text-sm md:text-base outline-none border-none pr-2 font-medium"
           />
+
+          {/* Paperclip attachment icon INSIDE right side of input capsule */}
+          <button
+            type="button"
+            onClick={() => setShowAttachMenu(!showAttachMenu)}
+            className="p-1 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
+            title="Attach file"
+          >
+            <Paperclip className="w-5 h-5 -rotate-45" />
+          </button>
         </div>
 
+        {/* Camera Icon (Right outside capsule) */}
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
+          title="Camera"
+        >
+          <Camera className="w-6 h-6" />
+        </button>
+
+        {/* Green Circle Voice/Send Button */}
         {text.trim() ? (
           <button
+            type="button"
             onClick={handleSendText}
             disabled={isUploading}
-            className="p-2.5 rounded-full bg-[#00a884] text-white hover:bg-[#008f70] transition-transform active:scale-95 shadow-md"
+            className="w-10 h-10 rounded-full bg-[#00a884] text-white hover:bg-[#008f70] transition-transform active:scale-95 shadow-md flex items-center justify-center flex-shrink-0"
+            title="Send message"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5 ml-0.5" />
           </button>
         ) : (
           <button
+            type="button"
             onClick={() => setIsRecordingVoice(true)}
-            className="p-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+            className="w-10 h-10 rounded-full bg-[#00a884] text-white hover:bg-[#008f70] transition-transform active:scale-95 shadow-md flex items-center justify-center flex-shrink-0"
+            title="Voice Note"
           >
             <Mic className="w-5 h-5" />
           </button>

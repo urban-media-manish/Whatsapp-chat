@@ -5,8 +5,11 @@ import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { MessageBubble } from '../chat/MessageBubble';
 import { MessageInput } from '../chat/MessageInput';
-import { Download, FileSpreadsheet, Sparkles, RefreshCw, MessageSquare } from 'lucide-react';
-import type { User } from '../../types';
+import { VoiceCallModal } from '../chat/VoiceCallModal';
+import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText } from 'lucide-react';
+import type { User, Message } from '../../types';
+import { sounds } from '../../utils/audio';
+import { exportChatAsPdf, exportChatAsTxt } from '../../utils/exportChat';
 
 interface AdminChatAreaProps {
   onToggleContextPanel?: () => void;
@@ -14,18 +17,23 @@ interface AdminChatAreaProps {
 }
 
 export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPanel, showContextPanel }) => {
-  const { activeConversation, messages, addMessage, fetchConversations, typingState } = useChatStore();
+  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState } = useChatStore();
   const { user } = useAuthStore();
   const [agents, setAgents] = useState<User[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showVoiceCall, setShowVoiceCall] = useState(false);
+  const [isAiBotActive, setIsAiBotActive] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socket = getSocket();
 
   useEffect(() => {
     loadAgents();
-  }, []);
+    if (user?._id) {
+      socket.emit('join_agent_workspace', { userId: user._id });
+    }
+  }, [user?._id]);
 
   useEffect(() => {
     if (activeConversation) {
@@ -34,9 +42,53 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
         role: 'agent',
         userId: user?._id
       });
+      socket.emit('mark_read', { conversationId: activeConversation._id, readerType: 'agent' });
       fetchAISuggestions();
     }
   }, [activeConversation?._id]);
+
+  useEffect(() => {
+    socket.on('receive_message', (msg: Message) => {
+      addMessage(msg);
+      sounds.playReceived();
+      if (activeConversation) {
+        socket.emit('mark_read', { conversationId: activeConversation._id, readerType: 'agent' });
+
+        // Trigger AI Auto-Bot if active and message is from customer
+        if (isAiBotActive && msg.senderType === 'customer') {
+          setTimeout(async () => {
+            try {
+              const aiData = await api.getAISuggestions(activeConversation._id);
+              if (aiData.suggestions && aiData.suggestions.length > 0) {
+                const replyText = aiData.suggestions[0];
+                const aiMsg = await api.sendMessage({
+                  conversationId: activeConversation._id,
+                  senderType: 'agent',
+                  senderId: user?._id || 'ai_bot',
+                  senderName: 'Support AI Executive 🤖',
+                  content: replyText
+                });
+                addMessage(aiMsg);
+                socket.emit('send_message', aiMsg);
+                sounds.playSent();
+              }
+            } catch (err) {
+              console.error('AI Auto-reply error:', err);
+            }
+          }, 1200);
+        }
+      }
+    });
+
+    socket.on('messages_read_ack', ({ conversationId }: { conversationId: string }) => {
+      markAllMessagesRead(conversationId);
+    });
+
+    return () => {
+      socket.off('receive_message');
+      socket.off('messages_read_ack');
+    };
+  }, [socket, activeConversation, isAiBotActive, user?._id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -96,12 +148,12 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
   const handleExportPDF = () => {
     if (!activeConversation) return;
-    window.open(`/api/export/pdf/${activeConversation._id}`, '_blank');
+    exportChatAsPdf(messages, activeConversation.customer?.name || 'Customer');
   };
 
-  const handleExportCSV = () => {
+  const handleExportTXT = () => {
     if (!activeConversation) return;
-    window.open(`/api/export/csv/${activeConversation._id}`, '_blank');
+    exportChatAsTxt(messages, activeConversation.customer?.name || 'Customer');
   };
 
   if (!activeConversation) {
@@ -155,6 +207,20 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
         {/* Action Controls & Selectors */}
         <div className="flex items-center gap-2">
+          {/* AI Auto-Bot Switch */}
+          <button
+            onClick={() => setIsAiBotActive(!isAiBotActive)}
+            title={isAiBotActive ? 'AI Auto-Bot is ON' : 'Turn ON AI Auto-Bot'}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+              isAiBotActive
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 shadow-sm animate-pulse'
+                : 'bg-[#111b21] text-gray-400 border-gray-700 hover:text-gray-200'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>AI Bot: {isAiBotActive ? 'ON' : 'OFF'}</span>
+          </button>
+
           {/* Priority Select */}
           <select
             value={activeConversation.priority}
@@ -191,15 +257,28 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
             ))}
           </select>
 
+          {/* Voice Call Button */}
+          <button onClick={() => setShowVoiceCall(true)} title="Voice Call Customer" className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+            <Phone className="w-4 h-4 text-emerald-400" />
+          </button>
           {/* Export Buttons */}
           <button onClick={handleExportPDF} title="Export Chat PDF" className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
             <Download className="w-4 h-4 text-emerald-400" />
           </button>
-          <button onClick={handleExportCSV} title="Export CSV" className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
-            <FileSpreadsheet className="w-4 h-4 text-sky-400" />
+          <button onClick={handleExportTXT} title="Export Chat TXT" className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+            <FileText className="w-4 h-4 text-sky-400" />
           </button>
         </div>
       </div>
+
+      {/* ── Voice Call Modal ── */}
+      {showVoiceCall && (
+        <VoiceCallModal
+          contactName={customerName}
+          phoneNumber={activeConversation.customer?.phone || "+91 9876543210"}
+          onClose={() => setShowVoiceCall(false)}
+        />
+      )}
 
       {/* AI Suggested Replies Bar */}
       <div className="bg-[#111b21]/90 px-4 py-2 border-b border-[#222d34] flex items-center justify-between gap-2 overflow-x-auto">
@@ -243,7 +322,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 chat-wallpaper">
         {messages.map((msg) => (
           <MessageBubble
-            key={msg._id}
+            key={`${msg._id}_${msg.status}`}
             message={msg}
             currentUserId={user?._id}
             isAgentView={true}

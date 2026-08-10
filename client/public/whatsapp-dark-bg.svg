@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="412" height="412" viewBox="0 0 412 412">
+  <rect width="412" height="412" fill="#0b141a"/>
+  <g fill="none" stroke="#ffffff" stroke-width="1.1" stroke-opacity="0.06" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Camera -->
+    <rect x="30" y="30" width="32" height="22" rx="3"/>
+    <circle cx="46" cy="41" r="6"/>
+    <!-- Heart -->
+    <path d="M140 38c-5-6-15-3-15 3 0 8 15 15 15 15s15-7 15-15c0-6-10-9-15-3z"/>
+    <!-- Music note -->
+    <path d="M220 40v-16l20-4v16M220 32l20-4"/>
+    <circle cx="216" cy="40" r="4"/>
+    <!-- Chat bubble -->
+    <path d="M300 28h26a8 8 0 0 1 8 8v14a8 8 0 0 1-8 8h-14l-8 6v-6h-4a8 8 0 0 1-8-8v-14a8 8 0 0 1 8-8z"/>
+    <!-- Sun -->
+    <circle cx="380" cy="38" r="8"/>
+
+    <!-- Row 2 -->
+    <!-- Ball -->
+    <circle cx="50" cy="130" r="14"/>
+    <!-- Cup -->
+    <path d="M120 120h24v16a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8v-16zM144 125h5a4 4 0 0 1 0 8h-5"/>
+    <!-- Rocket -->
+    <path d="M210 115c8-12 20-16 20-16s-4 12-16 20l-4-4z"/>
+    <!-- Calc -->
+    <rect x="290" y="115" width="24" height="32" rx="3"/>
+    <!-- Glasses -->
+    <circle cx="360" cy="130" r="7"/><circle cx="380" cy="130" r="7"/>
+
+    <!-- Row 3 -->
+    <!-- Mountain/Turtle -->
+    <path d="M40 220c0-12 12-20 24-20s24 8 24 20z"/>
+    <!-- Tree -->
+    <path d="M130 230v-18M118 212c0-8 12-12 12-12s12 4 12 12c0 6-12 8-12 8s-12-2-12-8z"/>
+    <!-- Icecream -->
+    <path d="M200 205l8 24 8-24z"/>
+    <circle cx="208" cy="200" r="8"/>
+    <!-- Lock -->
+    <rect x="280" y="210" width="18" height="14" rx="2"/>
+    <path d="M284 210v-5a5 5 0 0 1 10 0v5"/>
+    <!-- Phone -->
+    <path d="M360 205c4 0 16 12 16 16l-4 4c-6-2-12-8-14-14l2-6z"/>
+
+    <!-- Row 4 -->
+    <!-- Smile -->
+    <circle cx="50" cy="310" r="14"/>
+    <path d="M44 314c2 4 10 4 12 0"/>
+    <!-- Cloud -->
+    <path d="M110 310c-4-6 4-12 10-8 3-6 13-4 13 2 5 0 6 8 2 10h-25z"/>
+    <!-- Trophy -->
+    <path d="M190 300h24v12a8 8 0 0 1-8 8h-8a8 8 0 0 1-8-8v-12z"/>
+    <!-- Star -->
+    <path d="M280 310l4-14 6 8 8-8 4 14z"/>
+    <!-- Plane -->
+    <path d="M350 310l24-12-8 20-4-6-12-2z"/>
+  </g>
+</svg>

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Conversation, Message, Customer, QuickReply } from '../types';
 import { api } from '../services/api';
+import { getSocket } from '../services/socket';
 
 export interface TypingState {
   isTyping: boolean;
@@ -37,6 +38,7 @@ interface ChatState {
   fetchConversations: () => Promise<void>;
   fetchMessages: (conversationId: string) => Promise<void>;
   addMessage: (msg: Message) => void;
+  markAllMessagesRead: (conversationId: string) => void;
   setReplyToMessage: (msg: Message | null) => void;
   setTyping: (conversationId: string, name: string, isTyping: boolean, senderType?: string) => void;
   setCustomerSession: (cust: Customer, conv: Conversation) => void;
@@ -95,7 +97,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
 
   setActiveConversation: (conv) => {
-    set({ activeConversation: conv, replyToMessage: null });
+    const { conversations, activeConversation } = get();
+    const socket = getSocket();
+
+    if (activeConversation && activeConversation._id !== conv?._id) {
+      socket.emit('leave_conversation', { conversationId: activeConversation._id });
+    }
+
+    if (conv) {
+      socket.emit('join_conversation', { conversationId: conv._id, role: 'agent' });
+      socket.emit('mark_read', { conversationId: conv._id, readerType: 'agent' });
+    }
+
+    const updatedConvs = conversations.map(c =>
+      c._id === conv?._id ? { ...c, unreadCount: 0 } : c
+    );
+    set({
+      activeConversation: conv ? { ...conv, unreadCount: 0 } : null,
+      conversations: updatedConvs,
+      replyToMessage: null
+    });
     if (conv) {
       get().fetchMessages(conv._id);
     } else {
@@ -162,13 +183,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
             timestamp: msg.createdAt
           },
           updatedAt: msg.createdAt,
-          unreadCount: (activeConversation?._id === c._id) ? c.unreadCount : c.unreadCount + 1
+          unreadCount: (activeConversation?._id === c._id) ? 0 : c.unreadCount + 1
         };
       }
       return c;
     });
 
     set({ conversations: updatedConvs });
+  },
+
+  markAllMessagesRead: (conversationId) => {
+    set((state) => ({
+      messages: state.messages.map((m) => {
+        const cId = typeof m.conversation === 'object' && m.conversation !== null
+          ? (m.conversation as any)._id
+          : m.conversation;
+        return (cId === conversationId || !conversationId) ? { ...m, status: 'read' as const } : m;
+      })
+    }));
   },
 
   setReplyToMessage: (msg) => set({ replyToMessage: msg }),

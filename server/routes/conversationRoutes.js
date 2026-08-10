@@ -58,7 +58,24 @@ router.get('/', protect, async (req, res) => {
       });
     }
 
-    res.json(conversations);
+    // Deduplicate conversations by unique customer name / phone number
+    const seenKeys = new Set();
+    const deduplicatedConvs = [];
+
+    for (const conv of conversations) {
+      const custName = (conv.customer?.name || '').toLowerCase().trim();
+      const firstName = custName.split(' ')[0];
+      const key = (firstName && firstName !== 'anonymous' && !firstName.startsWith('guest_'))
+        ? firstName
+        : (conv.customer?.phone ? conv.customer.phone.trim() : conv._id.toString());
+
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        deduplicatedConvs.push(conv);
+      }
+    }
+
+    res.json(deduplicatedConvs);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
