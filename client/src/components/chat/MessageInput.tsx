@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Smile, Paperclip, Mic, Send, Image, FileText, Music, X, Zap, Camera } from 'lucide-react';
 import { EmojiPickerModal } from './EmojiPickerModal';
 import { VoiceRecorder } from './VoiceRecorder';
+import { PastedImageModal } from './PastedImageModal';
 import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { useChatStore } from '../../store/useChatStore';
@@ -31,6 +32,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [pastedFile, setPastedFile] = useState<File | null>(null);
+  const [pastedPreviewUrl, setPastedPreviewUrl] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -91,16 +94,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handlePasteImageFile = async (file: File) => {
+  const handleSendPastedImage = async (caption: string) => {
+    if (!pastedFile) return;
     setIsUploading(true);
     try {
-      const res = await api.uploadFile(file);
+      const res = await api.uploadFile(pastedFile);
+      const contentText = caption.trim()
+        ? caption.trim()
+        : `[Attached ${res.type.toUpperCase()}: ${res.fileName}]`;
+
       const msg = await api.sendMessage({
         conversationId,
         senderType,
         senderId,
         senderName,
-        content: `[Attached ${res.type.toUpperCase()}: ${res.fileName}]`,
+        content: contentText,
         type: res.type,
         fileUrl: res.fileUrl,
         fileName: res.fileName,
@@ -113,6 +121,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       socket.emit('send_message', msg);
       sounds.playSent();
       setReplyToMessage(null);
+      setPastedFile(null);
+      setPastedPreviewUrl('');
     } catch (err) {
       console.error('Pasted image upload error:', err);
       alert('Failed to send pasted screenshot');
@@ -121,7 +131,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement> | ClipboardEvent) => {
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement> | ClipboardEvent) => {
     const items = (e as ClipboardEvent).clipboardData?.items || (e as React.ClipboardEvent).clipboardData?.items;
     if (!items) return;
 
@@ -131,7 +141,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          await handlePasteImageFile(file);
+          setPastedFile(file);
+          setPastedPreviewUrl(URL.createObjectURL(file));
         }
         break;
       }
@@ -385,6 +396,20 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           </button>
         )}
       </div>
+
+      {/* Pasted Screenshot Preview Modal */}
+      {pastedFile && pastedPreviewUrl && (
+        <PastedImageModal
+          file={pastedFile}
+          previewUrl={pastedPreviewUrl}
+          onSend={(caption) => handleSendPastedImage(caption)}
+          onCancel={() => {
+            setPastedFile(null);
+            setPastedPreviewUrl('');
+          }}
+          isUploading={isUploading}
+        />
+      )}
     </div>
   );
 };
