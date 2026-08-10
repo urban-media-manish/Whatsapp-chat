@@ -91,6 +91,63 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
+  const handlePasteImageFile = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const res = await api.uploadFile(file);
+      const msg = await api.sendMessage({
+        conversationId,
+        senderType,
+        senderId,
+        senderName,
+        content: `[Attached ${res.type.toUpperCase()}: ${res.fileName}]`,
+        type: res.type,
+        fileUrl: res.fileUrl,
+        fileName: res.fileName,
+        fileSize: res.fileSize,
+        mimeType: res.mimeType,
+        replyToId: replyToMessage?._id
+      });
+
+      addMessage(msg);
+      socket.emit('send_message', msg);
+      sounds.playSent();
+      setReplyToMessage(null);
+    } catch (err) {
+      console.error('Pasted image upload error:', err);
+      alert('Failed to send pasted screenshot');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement> | ClipboardEvent) => {
+    const items = (e as ClipboardEvent).clipboardData?.items || (e as React.ClipboardEvent).clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await handlePasteImageFile(file);
+        }
+        break;
+      }
+    }
+  };
+
+  useEffect(() => {
+    const windowPasteHandler = (e: ClipboardEvent) => {
+      handlePaste(e);
+    };
+    window.addEventListener('paste', windowPasteHandler);
+    return () => {
+      window.removeEventListener('paste', windowPasteHandler);
+    };
+  }, [conversationId, senderType, senderId, senderName]);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -280,6 +337,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             value={text}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={placeholder || "Type your message..."}
             className="w-full bg-transparent text-gray-900 dark:text-[#e9edef] placeholder-gray-500 dark:placeholder-[#8696a0] text-sm md:text-base outline-none border-none pr-2 font-medium"
           />
