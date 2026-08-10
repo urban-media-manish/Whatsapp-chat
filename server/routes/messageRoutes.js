@@ -139,6 +139,10 @@ router.delete('/:id', async (req, res) => {
     message.fileUrl = '';
     await message.save();
 
+    if (req.io) {
+      req.io.emit('message_deleted', { messageId: message._id, conversationId: message.conversation });
+    }
+
     res.json(message);
   } catch (error) {
     res.status(500).json({ message: error.message });

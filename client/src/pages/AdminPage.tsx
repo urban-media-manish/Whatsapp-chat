@@ -65,10 +65,28 @@ export const AdminPage: React.FC = () => {
       fetchConversations();
     });
 
+    socket.on('conversation_deleted', ({ conversationId }: { conversationId: string }) => {
+      const store = useChatStore.getState();
+      if (store.activeConversation?._id === conversationId) {
+        store.setActiveConversation(null);
+      }
+      store.fetchConversations();
+    });
+
+    socket.on('message_deleted', ({ conversationId }: { conversationId: string }) => {
+      const store = useChatStore.getState();
+      if (store.activeConversation?._id === conversationId) {
+        store.fetchMessages(conversationId);
+      }
+      store.fetchConversations();
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('new_conversation');
       socket.off('conversation_activity');
+      socket.off('conversation_deleted');
+      socket.off('message_deleted');
     };
   }, [socket]);
 

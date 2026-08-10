@@ -258,4 +258,29 @@ router.get('/meta/quick-replies', protect, async (req, res) => {
   }
 });
 
+// @route DELETE /api/conversations/:id
+// Delete complete conversation chat and all its messages
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const conversationId = req.params.id;
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+
+    const { Message } = await import('../models/Message.js');
+    await Message.deleteMany({ conversation: conversationId });
+    await Conversation.findByIdAndDelete(conversationId);
+
+    // Broadcast socket event
+    if (req.io) {
+      req.io.emit('conversation_deleted', { conversationId });
+    }
+
+    res.json({ success: true, message: 'Conversation deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;

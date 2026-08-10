@@ -42,6 +42,7 @@ interface ChatState {
   setReplyToMessage: (msg: Message | null) => void;
   setTyping: (conversationId: string, name: string, isTyping: boolean, senderType?: string) => void;
   setCustomerSession: (cust: Customer, conv: Conversation) => void;
+  deleteConversation: (id: string) => Promise<void>;
 
   setSearchQuery: (q: string) => void;
   setActiveFilter: (f: 'all' | 'unread' | 'mine' | 'pinned' | 'archived') => void;
@@ -249,6 +250,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ quickReplies: replies });
     } catch (err) {
       console.error(err);
+    }
+  },
+
+  deleteConversation: async (id: string) => {
+    try {
+      await api.deleteConversation(id);
+      set((state) => {
+        const isCurrent = state.activeConversation?._id === id;
+        return {
+          conversations: state.conversations.filter(c => c._id !== id),
+          activeConversation: isCurrent ? null : state.activeConversation,
+          messages: isCurrent ? [] : state.messages
+        };
+      });
+    } catch (err) {
+      console.error('Delete conversation error:', err);
+      alert('Failed to delete conversation');
     }
   }
 }));

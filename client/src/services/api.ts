@@ -122,6 +122,15 @@ export const api = {
     return res.json();
   },
 
+  deleteConversation: async (id: string): Promise<{ success: boolean }> => {
+    const res = await fetch(`${API_BASE}/conversations/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to delete conversation');
+    return res.json();
+  },
+
   toggleCustomerBlockMute: async (id: string, payload: { blocked?: boolean; muted?: boolean }) => {
     const res = await fetch(`${API_BASE}/conversations/${id}/customer-actions`, {
       method: 'PUT',

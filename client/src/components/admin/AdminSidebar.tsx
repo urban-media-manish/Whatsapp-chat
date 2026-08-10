@@ -1,4 +1,4 @@
-import { Search, MessageSquare, BarChart2, LogOut, Pin } from 'lucide-react';
+import { Search, MessageSquare, BarChart2, LogOut, Pin, Trash2 } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -14,6 +14,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
     conversations,
     activeConversation,
     setActiveConversation,
+    deleteConversation,
     searchQuery,
     setSearchQuery,
     activeFilter,
@@ -152,7 +153,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                 <div
                   key={conv._id}
                   onClick={() => setActiveConversation(conv)}
-                  className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                  className={`group relative flex items-center gap-3 p-3 cursor-pointer transition-colors ${
                     isSelected ? 'bg-[#2a3942]' : 'hover:bg-[#202c33]'
                   }`}
                 >
@@ -190,11 +191,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                         {conv.isPinned && <Pin className="w-3 h-3 text-emerald-400 fill-emerald-400" />}
                       </div>
 
-                      {conv.unreadCount > 0 && !isSelected && (
-                        <span className="bg-[#00a884] text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                          {conv.unreadCount}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete entire chat with ${conv.customer?.name || 'Customer'}?`)) {
+                              deleteConversation(conv._id);
+                            }
+                          }}
+                          title="Delete Chat"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        {conv.unreadCount > 0 && !isSelected && (
+                          <span className="bg-[#00a884] text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                            {conv.unreadCount}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
