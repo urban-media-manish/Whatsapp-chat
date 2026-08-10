@@ -290,18 +290,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             ))}
           </div>
         )}
-
-        {/* Quick Reaction Bar */}
-        {showReactors && (
-          <div className={`absolute top-8 ${isSentByMe ? 'right-0' : 'left-0'} z-30 flex gap-1 bg-white dark:bg-[#202c33] p-1.5 rounded-full shadow-xl border border-gray-200 dark:border-gray-700`}>
-            {QUICK_REACTIONS.map((emoji) => (
-              <button key={emoji} onClick={() => handleReact(emoji)}
-                className="hover:scale-125 transition-transform p-1 text-base">
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── Action buttons RIGHT of bubble (for received messages) ── */}

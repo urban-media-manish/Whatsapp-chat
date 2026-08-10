@@ -126,8 +126,8 @@ const getFullMediaUrl = (url?: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
-  const baseUrl = import.meta.env.VITE_API_URL || '';
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const apiHost = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
+  const cleanBase = apiHost.endsWith('/') ? apiHost.slice(0, -1) : apiHost;
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
   return `${cleanBase}${cleanUrl}`;
 };
