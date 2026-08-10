@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, Reply, Smile, Edit3, Trash2 } from 'lucide-react';
+import { Check, CheckCheck, Reply, Smile, Edit3, Trash2, Copy, Download, Share2 } from 'lucide-react';
 import type { Message } from '../../types';
 import { MediaPreviewer } from './MediaPreviewer';
 import { api } from '../../services/api';
@@ -48,6 +48,39 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
   const [showReactors, setShowReactors] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
+
+  const handleCopyText = () => {
+    if (message.content) {
+      navigator.clipboard.writeText(message.content);
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 1500);
+    }
+  };
+
+  const handleDownloadFile = () => {
+    if (!message.fileUrl) return;
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const fullSrc = message.fileUrl.startsWith('http') || message.fileUrl.startsWith('data:') || message.fileUrl.startsWith('blob:')
+      ? message.fileUrl
+      : `${baseUrl}${message.fileUrl.startsWith('/') ? '' : '/'}${message.fileUrl}`;
+
+    const a = document.createElement('a');
+    a.href = fullSrc;
+    a.download = message.fileName || 'downloaded_media';
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleForwardMessage = () => {
+    if (message.content) {
+      navigator.clipboard.writeText(message.content);
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 1500);
+    }
+  };
 
   const isSystem = message.senderType === 'system';
   const isSentByMe = isAgentView
@@ -112,23 +145,39 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
 
       {/* ── Action buttons LEFT of bubble (for sent/my messages) ── */}
       {isSentByMe && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-1.5 self-end mb-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-1.5 self-end mb-1 flex-shrink-0 bg-white/90 dark:bg-[#111b21]/90 backdrop-blur-xs p-1 rounded-xl shadow-xs border border-gray-200/60 dark:border-gray-700/60">
           <button onClick={() => setReplyToMessage(message)} title="Reply"
-            className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
             <Reply className="w-3.5 h-3.5" />
           </button>
           <button onClick={() => setShowReactors(!showReactors)} title="React"
-            className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
             <Smile className="w-3.5 h-3.5" />
+          </button>
+          {message.content && (
+            <button onClick={handleCopyText} title="Copy Text"
+              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {message.fileUrl && (
+            <button onClick={handleDownloadFile} title="Save / Download Media"
+              className="p-1 hover:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+              <Download className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button onClick={handleForwardMessage} title="Forward"
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            <Share2 className="w-3.5 h-3.5" />
           </button>
           {!message.isDeleted && (
             <>
               <button onClick={() => setIsEditing(true)} title="Edit"
-                className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
                 <Edit3 className="w-3.5 h-3.5" />
               </button>
               <button onClick={handleDelete} title="Delete"
-                className="p-1.5 hover:bg-red-500/10 rounded-lg text-red-400">
+                className="p-1 hover:bg-red-500/10 rounded-lg text-red-400">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </>
@@ -145,6 +194,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             : 'bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 rounded-tl-none border border-black/5 dark:border-white/5'
         }`}
       >
+        {/* Toast Copied Notification */}
+        {showCopiedToast && (
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-black/90 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-lg z-40 animate-in fade-in zoom-in-90 duration-150 whitespace-nowrap">
+            Copied to clipboard! ✓
+          </div>
+        )}
+
         {/* Quick Reactions Floating Popover */}
         {showReactors && (
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-30 bg-white dark:bg-[#202c33] px-2.5 py-1.5 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-1.5 animate-in fade-in zoom-in-90 duration-150">
@@ -159,6 +215,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             ))}
           </div>
         )}
+
         {/* Sender Name Label */}
         {!isSentByMe && (
           <p className="text-[11px] font-bold text-[#00a884] dark:text-[#00a884] mb-1">
@@ -249,14 +306,30 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
 
       {/* ── Action buttons RIGHT of bubble (for received messages) ── */}
       {!isSentByMe && (
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 self-end mb-1 flex-shrink-0">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 self-end mb-1 flex-shrink-0 bg-white/90 dark:bg-[#111b21]/90 backdrop-blur-xs p-1 rounded-xl shadow-xs border border-gray-200/60 dark:border-gray-700/60">
           <button onClick={() => setReplyToMessage(message)} title="Reply"
-            className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
             <Reply className="w-3.5 h-3.5" />
           </button>
           <button onClick={() => setShowReactors(!showReactors)} title="React"
-            className="p-1.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
             <Smile className="w-3.5 h-3.5" />
+          </button>
+          {message.content && (
+            <button onClick={handleCopyText} title="Copy Text"
+              className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {message.fileUrl && (
+            <button onClick={handleDownloadFile} title="Save / Download Media"
+              className="p-1 hover:bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400">
+              <Download className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button onClick={handleForwardMessage} title="Forward"
+            className="p-1 hover:bg-black/10 dark:hover:bg-white/10 rounded-lg text-gray-500 dark:text-gray-400">
+            <Share2 className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
