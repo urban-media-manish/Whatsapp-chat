@@ -121,10 +121,22 @@ interface MediaPreviewerProps {
   fileSize?: number;
 }
 
+const getFullMediaUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${cleanBase}${cleanUrl}`;
+};
+
 export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, fileName, fileSize }) => {
   const [showLightbox, setShowLightbox] = useState(false);
 
   if (!fileUrl) return null;
+  const fullSrc = getFullMediaUrl(fileUrl);
 
   const formatBytes = (bytes?: number) => {
     if (!bytes) return '';
@@ -138,7 +150,7 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
     return (
       <div className="mt-1 relative group rounded-lg overflow-hidden border border-black/5 dark:border-white/10 max-w-sm">
         <img
-          src={fileUrl}
+          src={fullSrc}
           alt={fileName || 'Attached Image'}
           className="w-full max-h-72 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
           onClick={() => setShowLightbox(true)}
@@ -148,7 +160,7 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
             <button className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 hover:bg-white/40">
               <X className="w-6 h-6" />
             </button>
-            <img src={fileUrl} alt={fileName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+            <img src={fullSrc} alt={fileName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
           </div>
         )}
       </div>
@@ -158,13 +170,13 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
   if (type === 'video') {
     return (
       <div className="mt-1 rounded-lg overflow-hidden max-w-sm border border-black/10 dark:border-white/10">
-        <video controls src={fileUrl} className="w-full max-h-72 object-cover rounded-lg" />
+        <video controls src={fullSrc} className="w-full max-h-72 object-cover rounded-lg" />
       </div>
     );
   }
 
   if (type === 'audio') {
-    return <WhatsAppAudioPlayer src={fileUrl} />;
+    return <WhatsAppAudioPlayer src={fullSrc} />;
   }
 
   if (type === 'pdf') {
@@ -178,7 +190,7 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
           </div>
         </div>
         <a
-          href={fileUrl}
+          href={fullSrc}
           target="_blank"
           rel="noopener noreferrer"
           download={fileName}
@@ -202,7 +214,7 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
         </div>
       </div>
       <a
-        href={fileUrl}
+        href={fullSrc}
         target="_blank"
         rel="noopener noreferrer"
         download={fileName}
