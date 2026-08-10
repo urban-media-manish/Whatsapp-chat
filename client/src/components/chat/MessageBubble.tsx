@@ -260,7 +260,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             </div>
           </div>
         ) : (
-          message.content && !message.content.startsWith('[Attached ') && !message.content.startsWith('[Voice Note]') && (
+          !(message.type !== 'text' && (message.content.startsWith('[Attached ') || message.content === '[Voice Note]' || message.content === '')) && (
             <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed select-text mt-1" style={{ overflowWrap: 'anywhere' }}>
               {renderFormattedText(message.content)}
               {message.isEdited && <span className="text-[9px] text-gray-400 ml-1 italic">(edited)</span>}
