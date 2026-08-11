@@ -81,14 +81,47 @@ export const AdminPage: React.FC = () => {
       store.fetchConversations();
     });
 
+    socket.on('user_typing', ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
+      const store = useChatStore.getState();
+      store.setTyping(conversationId, senderName, isTyping, senderType);
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('new_conversation');
       socket.off('conversation_activity');
       socket.off('conversation_deleted');
       socket.off('message_deleted');
+      socket.off('user_typing');
     };
   }, [socket]);
+
+  // Auto-rejoin agent workspace & active conversation on connect/reconnect
+  useEffect(() => {
+    const handleConnect = () => {
+      console.log('🔌 Agent Socket connected: re-joining workspace...');
+      if (user?._id) {
+        socket.emit('join_agent_workspace', { userId: user._id });
+      }
+      if (activeConversation?._id) {
+        socket.emit('join_conversation', {
+          conversationId: activeConversation._id,
+          role: 'agent',
+          userId: user?._id
+        });
+        socket.emit('mark_read', { conversationId: activeConversation._id, readerType: 'agent' });
+      }
+    };
+
+    socket.on('connect', handleConnect);
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off('connect', handleConnect);
+    };
+  }, [socket, user?._id, activeConversation?._id]);
 
   if (isLoading) {
     return (

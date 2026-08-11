@@ -170,12 +170,42 @@ export const CustomerChatPortal: React.FC = () => {
       }));
     });
 
+    socket.on('user_typing', ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
+      const store = useChatStore.getState();
+      store.setTyping(conversationId, senderName, isTyping, senderType);
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('messages_read_ack');
       socket.off('message_status_update');
+      socket.off('user_typing');
     };
   }, [socket, customerConversation]);
+
+  // Auto-rejoin conversation room on connect/reconnect
+  useEffect(() => {
+    const handleConnect = () => {
+      if (customerSession?._id && customerConversation?._id) {
+        console.log('🔌 Customer Socket connected: re-joining conversation...');
+        socket.emit('join_conversation', {
+          conversationId: customerConversation._id,
+          role: 'customer',
+          userId: customerSession._id
+        });
+        socket.emit('mark_read', { conversationId: customerConversation._id, readerType: 'customer' });
+      }
+    };
+
+    socket.on('connect', handleConnect);
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off('connect', handleConnect);
+    };
+  }, [socket, customerSession?._id, customerConversation?._id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

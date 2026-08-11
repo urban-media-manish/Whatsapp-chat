@@ -29,8 +29,8 @@ export const setupSocket = (io) => {
 
       // Automatically mark all messages as READ when room is opened
       try {
-        const Message = (await import('../models/Message.js')).default;
-        const Conversation = (await import('../models/Conversation.js')).default;
+        const { Message } = await import('../models/Message.js');
+        const { Conversation } = await import('../models/Conversation.js');
 
         await Message.updateMany(
           { conversation: conversationId, status: { $ne: 'read' } },
@@ -64,10 +64,21 @@ export const setupSocket = (io) => {
         senderType,
         isTyping: true
       });
+      io.to('agent_workspace_room').emit('user_typing', {
+        conversationId,
+        senderName,
+        senderType,
+        isTyping: true
+      });
     });
 
     socket.on('typing_stop', ({ conversationId, senderType }) => {
       socket.to(`conv_${conversationId}`).emit('user_typing', {
+        conversationId,
+        senderType,
+        isTyping: false
+      });
+      io.to('agent_workspace_room').emit('user_typing', {
         conversationId,
         senderType,
         isTyping: false
@@ -77,7 +88,7 @@ export const setupSocket = (io) => {
     // Real-time message dispatch & Tick status evaluation
     socket.on('send_message', async (messageData) => {
       try {
-        const Message = (await import('../models/Message.js')).default;
+        const { Message } = await import('../models/Message.js');
         let finalStatus = messageData.status || 'sent';
 
         if (messageData.senderType === 'customer') {
@@ -152,8 +163,8 @@ export const setupSocket = (io) => {
     // Explicit Read receipt (Blue Ticks)
     socket.on('mark_read', async ({ conversationId, readerType }) => {
       try {
-        const Message = (await import('../models/Message.js')).default;
-        const Conversation = (await import('../models/Conversation.js')).default;
+        const { Message } = await import('../models/Message.js');
+        const { Conversation } = await import('../models/Conversation.js');
 
         await Message.updateMany(
           { conversation: conversationId, status: { $ne: 'read' } },

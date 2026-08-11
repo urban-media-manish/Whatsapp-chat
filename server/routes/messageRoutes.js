@@ -1,7 +1,7 @@
 import express from 'express';
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
-import { onlineAgents, activeChatRooms } from '../socket/index.js';
+import { onlineAgents, onlineCustomers, activeChatRooms } from '../socket/index.js';
 
 const router = express.Router();
 
@@ -49,6 +49,11 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+
     let initialStatus = 'sent';
     if (senderType === 'customer') {
       const isAgentOnline = onlineAgents.size > 0;
@@ -62,6 +67,15 @@ router.post('/', async (req, res) => {
           }
         }
         initialStatus = isAgentInThisRoom ? 'read' : 'delivered';
+      } else {
+        initialStatus = 'sent';
+      }
+    } else if (senderType === 'agent') {
+      const custId = conversation.customer.toString();
+      const customerSocketId = onlineCustomers.get(custId);
+      if (customerSocketId) {
+        const openConvId = activeChatRooms.get(customerSocketId);
+        initialStatus = openConvId === conversationId ? 'read' : 'delivered';
       } else {
         initialStatus = 'sent';
       }
@@ -84,7 +98,6 @@ router.post('/', async (req, res) => {
     });
 
     // Update conversation lastMessage & unread counts
-    const conversation = await Conversation.findById(conversationId);
     if (conversation) {
       conversation.lastMessage = {
         content: content || fileName || `[${type || 'attachment'}]`,
@@ -94,9 +107,17 @@ router.post('/', async (req, res) => {
       };
 
       if (senderType === 'customer') {
-        conversation.unreadCount += 1;
+        if (initialStatus === 'read') {
+          conversation.unreadCount = 0;
+        } else {
+          conversation.unreadCount += 1;
+        }
       } else if (senderType === 'agent') {
-        conversation.unreadCountCustomer += 1;
+        if (initialStatus === 'read') {
+          conversation.unreadCountCustomer = 0;
+        } else {
+          conversation.unreadCountCustomer += 1;
+        }
       }
 
       await conversation.save();

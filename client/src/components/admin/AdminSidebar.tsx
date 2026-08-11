@@ -32,7 +32,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
     searchQuery,
     setSearchQuery,
     activeFilter,
-    setActiveFilter
+    setActiveFilter,
+    typingState
   } = useChatStore();
 
   const getUnreadTotal = () => {
@@ -215,7 +216,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                     <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#111b21]" />
                   </div>
 
-                  {/* Info Column */}
+                    {/* Info Column */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="text-sm font-semibold text-gray-200 truncate">
@@ -224,9 +225,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                       <span className="text-[10px] text-gray-400 whitespace-nowrap">{timeStr}</span>
                     </div>
 
-                    <p className="text-xs text-gray-400 truncate">
-                      {conv.lastMessage?.content || 'No messages yet'}
-                    </p>
+                    {(() => {
+                      const isTyping = typingState[conv._id]?.senderType === 'customer' && typingState[conv._id]?.isTyping;
+                      return (
+                        <p className={`text-xs truncate ${isTyping ? 'text-emerald-400 font-semibold' : 'text-gray-400'}`}>
+                          {isTyping ? 'typing...' : (conv.lastMessage?.content || 'No messages yet')}
+                        </p>
+                      );
+                    })()}
 
                     <div className="flex items-center justify-between mt-1">
                       <div className="flex items-center gap-1">

@@ -84,9 +84,24 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
       markAllMessagesRead(conversationId);
     });
 
+    socket.on('message_status_update', ({ messageId, status }: { messageId: string; status: any }) => {
+      useChatStore.setState((state) => ({
+        messages: state.messages.map((m) =>
+          m._id === messageId ? { ...m, status } : m
+        )
+      }));
+    });
+
+    socket.on('user_typing', ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
+      const store = useChatStore.getState();
+      store.setTyping(conversationId, senderName, isTyping, senderType);
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('messages_read_ack');
+      socket.off('message_status_update');
+      socket.off('user_typing');
     };
   }, [socket, activeConversation, isAiBotActive, user?._id]);
 

@@ -37,6 +37,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const typingTimeoutRef = useRef<any | null>(null);
+  const isTypingRef = useRef<boolean>(false);
   const socket = getSocket();
 
   useEffect(() => {
@@ -44,6 +46,45 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       fetchQuickReplies();
     }
   }, [isAgentView]);
+
+  // Clean up typing status on unmount or conversation change
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (isTypingRef.current) {
+        socket.emit('typing_stop', { conversationId, senderType });
+        isTypingRef.current = false;
+      }
+    };
+  }, [conversationId, senderType]);
+
+  const startTyping = () => {
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      socket.emit('typing_start', { conversationId, senderName, senderType });
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping();
+    }, 2500);
+  };
+
+  const stopTyping = () => {
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      socket.emit('typing_stop', { conversationId, senderType });
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -57,7 +98,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
 
     // Emit typing status
-    socket.emit('typing_start', { conversationId, senderName, senderType });
+    if (val.trim() === '') {
+      stopTyping();
+    } else {
+      startTyping();
+    }
   };
 
   const handleSendText = async () => {
@@ -66,7 +111,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     const contentToSend = text;
     setText('');
     setShowQuickReplies(false);
-    socket.emit('typing_stop', { conversationId, senderType });
+    stopTyping();
 
     try {
       const msg = await api.sendMessage({
