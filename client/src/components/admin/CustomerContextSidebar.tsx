@@ -94,7 +94,7 @@ export const CustomerContextSidebar: React.FC<CustomerContextSidebarProps> = ({ 
   const customer = activeConversation.customer;
 
   return (
-    <div className="w-80 h-full bg-[#111b21] border-l border-[#222d34] overflow-y-auto flex flex-col gap-0 text-gray-200 flex-shrink-0">
+    <div className="w-full md:w-80 absolute md:relative right-0 top-0 bottom-0 z-30 h-full bg-[#111b21] border-l border-[#222d34] overflow-y-auto flex flex-col gap-0 text-gray-200 flex-shrink-0 shadow-2xl md:shadow-none">
 
       {/* Customer Header with Close Button */}
       <div className="flex flex-col items-center text-center p-4 pb-4 border-b border-[#222d34] relative">

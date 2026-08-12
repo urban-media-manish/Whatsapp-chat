@@ -7,31 +7,62 @@ const router = express.Router();
 
 // Helper: Smart Rule-Based & Generative AI fallback engine
 const generateAISuggestions = (lastMessages, customerName = 'Customer') => {
-  const text = lastMessages.map(m => m.content).join(' ').toLowerCase();
+  if (!lastMessages || lastMessages.length === 0) {
+    return [
+      `Thank you for contacting support, ${customerName}! How can I assist you with this today?`,
+      `I have received your message and I am reviewing the details now. Please give me a moment.`,
+      `Is there anything else specific you would like me to check on your account?`
+    ];
+  }
 
-  if (text.includes('price') || text.includes('cost') || text.includes('plan') || text.includes('subscription')) {
+  // Get the most recent message content
+  const latestMessage = lastMessages[0]; // Messages are sorted { createdAt: -1 } so index 0 is the newest!
+  const text = (latestMessage?.content || '').toLowerCase().trim();
+
+  // Keyword check on the whole context
+  const fullText = lastMessages.map(m => m.content).join(' ').toLowerCase();
+
+  if (fullText.includes('price') || fullText.includes('cost') || fullText.includes('plan') || fullText.includes('subscription')) {
     return [
       `Hello ${customerName}! Our enterprise plan starts at $49/mo with full WhatsApp integration. Would you like a product demo?`,
       `Hi ${customerName}, we offer starter, professional, and custom enterprise tiers. Shall I send our detailed pricing sheet?`,
       `You can review all pricing and features directly on our billing portal or I can walk you through the options now.`
     ];
-  } else if (text.includes('refund') || text.includes('cancel') || text.includes('money')) {
+  } else if (fullText.includes('refund') || fullText.includes('cancel') || fullText.includes('money')) {
     return [
       `I understand your request regarding cancellation, ${customerName}. Let me check your account details right away.`,
       `I am sorry to hear you want to cancel. I can process a full refund within 30 days of purchase per our policy.`,
       `Would you mind sharing a quick reason for the cancellation? I would love to see if we can resolve any issues first!`
     ];
-  } else if (text.includes('error') || text.includes('bug') || text.includes('not working') || text.includes('failed') || text.includes('issue')) {
+  } else if (fullText.includes('error') || fullText.includes('bug') || fullText.includes('not working') || fullText.includes('failed') || fullText.includes('issue')) {
     return [
       `Thanks for letting us know! Could you please share a screenshot or error log so I can escalate this to technical support?`,
       `I apologize for the inconvenience, ${customerName}. I am checking our server status and error logs right now.`,
       `Let us troubleshoot this together: please try clearing browser cache or re-logging into your dashboard.`
     ];
+  } else if (text === 'hi' || text === 'hello' || text === 'hii' || text === 'hey' || text === '👋') {
+    return [
+      `Hello ${customerName}! Welcome to Live Support. How can we help you today?`,
+      `Hi there! Thanks for reaching out. How can I assist you today?`,
+      `Hey ${customerName}! Hope you are doing great. How can we support you today?`
+    ];
+  } else if (text.includes('explain') || text.includes('how') || text.includes('what') || text.includes('help')) {
+    return [
+      `Sure! I'd be happy to explain or guide you. Could you please specify which part you would like help with?`,
+      `I'm here to help! Let me know if you need help with installation, features, or billing.`,
+      `Certainly, ${customerName}! Please tell me more about your requirements so I can explain it clearly.`
+    ];
+  } else if (text === 'ok' || text === 'yes' || text === 'yup' || text === 'okay' || text === 'sure') {
+    return [
+      `Awesome! Let me know if you need anything else.`,
+      `Perfect. I am standing by if you have any questions.`,
+      `Great! Feel free to ask any other questions when you are ready.`
+    ];
   } else {
     return [
-      `Thank you for contacting support, ${customerName}! How can I assist you with this today?`,
       `I have received your message and I am reviewing the details now. Please give me a moment.`,
-      `Is there anything else specific you would like me to check on your account?`
+      `Is there anything else specific you would like me to check on your account?`,
+      `Thank you for contacting support, ${customerName}! How can I assist you with this today?`
     ];
   }
 };

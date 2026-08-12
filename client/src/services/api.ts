@@ -290,5 +290,22 @@ export const api = {
   getAnalytics: async (): Promise<AnalyticsData> => {
     const res = await fetch(`${API_BASE}/analytics/overview`, { headers: getHeaders() });
     return res.json();
+  },
+
+  // Settings API
+  getSettings: async (): Promise<{ welcomeMessage: string }> => {
+    const res = await fetch(`${API_BASE}/settings`, { headers: getHeaders() });
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    return res.json();
+  },
+
+  saveSettings: async (welcomeMessage: string): Promise<{ welcomeMessage: string }> => {
+    const res = await fetch(`${API_BASE}/settings`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ welcomeMessage })
+    });
+    if (!res.ok) throw new Error('Failed to save settings');
+    return res.json();
   }
 };

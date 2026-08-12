@@ -17,6 +17,7 @@ import uploadRoutes from './routes/uploadRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import exportRoutes from './routes/exportRoutes.js';
+import settingRoutes from './routes/settingRoutes.js';
 import { setupSocket } from './socket/index.js';
 
 dotenv.config();
@@ -76,6 +77,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export', exportRoutes);
+app.use('/api/settings', settingRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

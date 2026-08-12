@@ -2,6 +2,7 @@ import express from 'express';
 import { Customer } from '../models/Customer.js';
 import { Conversation } from '../models/Conversation.js';
 import { Message } from '../models/Message.js';
+import { Setting } from '../models/Setting.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();
@@ -83,13 +84,27 @@ router.post('/init', async (req, res) => {
         }
       });
 
+      // Get customized welcome message from settings or fallback to default
+      let welcomeMessage = `👋 Welcome to our Live Support, {name}! An agent will be with you shortly. Feel free to describe your issue or ask any questions.`;
+      try {
+        const welcomeMessageSetting = await Setting.findOne({ key: 'welcomeMessage' });
+        if (welcomeMessageSetting && welcomeMessageSetting.value) {
+          welcomeMessage = welcomeMessageSetting.value;
+        }
+      } catch (err) {
+        console.error('Failed to load welcome message setting:', err);
+      }
+
+      // Replace {name} placeholder dynamically
+      const parsedWelcomeMessage = welcomeMessage.replace(/\{name\}/g, customer.name);
+
       // Send initial welcome message
       await Message.create({
         conversation: conversation._id,
         senderType: 'system',
         senderId: 'system',
         senderName: 'Support System',
-        content: `👋 Welcome to our Live Support, ${customer.name}! An agent will be with you shortly. Feel free to describe your issue or ask any questions.`
+        content: parsedWelcomeMessage
       });
 
       conversation = await Conversation.findById(conversation._id)

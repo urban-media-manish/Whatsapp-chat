@@ -233,13 +233,15 @@ export const CustomerChatPortal: React.FC = () => {
           </button>
           <div className="relative cursor-pointer flex items-center gap-2.5" onClick={() => setIsEditingProfile(true)}>
             <img
-              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
-              alt="WhatsApp"
+              src={customerConversation?.assignedAgent?.avatar || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"}
+              alt={customerConversation?.assignedAgent?.name || "Support"}
               className="w-10 h-10 rounded-full object-cover border border-white/30 shadow-xs"
             />
             <div>
               <div className="flex items-center gap-1.5">
-                <h2 className="text-sm md:text-base font-bold text-white tracking-wide">WhatsApp</h2>
+                <h2 className="text-sm md:text-base font-bold text-white tracking-wide">
+                  {customerConversation?.assignedAgent?.name || "Support"}
+                </h2>
                 <CheckCircle2 className="w-4 h-4 text-white fill-[#1da1f2]" />
               </div>
               <p className="text-[11px] text-emerald-100 dark:text-emerald-400 font-medium">
@@ -311,8 +313,8 @@ export const CustomerChatPortal: React.FC = () => {
       {/* ── Voice Call Modal ── */}
       {showVoiceCall && (
         <VoiceCallModal
-          contactName="WhatsApp"
-          contactImage="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"
+          contactName={customerConversation?.assignedAgent?.name || "Support"}
+          contactImage={customerConversation?.assignedAgent?.avatar || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80"}
           phoneNumber={phoneInput || "+91 9876543210"}
           onClose={() => setShowVoiceCall(false)}
         />
@@ -349,18 +351,22 @@ export const CustomerChatPortal: React.FC = () => {
           <div className="bg-white dark:bg-[#202c33] rounded-3xl p-5 shadow-xl text-center border border-gray-100 dark:border-gray-700/60 transition-all hover:shadow-2xl">
             <div className="relative w-16 h-16 mx-auto mb-3">
               <img
-                src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
-                alt="WhatsApp"
+                src={customerConversation?.assignedAgent?.avatar || "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"}
+                alt={customerConversation?.assignedAgent?.name || "Support"}
                 className="w-16 h-16 rounded-full object-cover border-2 border-[#00a884] shadow-md"
               />
               <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-[#202c33]" />
             </div>
 
             <div className="flex items-center justify-center gap-1.5 mb-0.5">
-              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">WhatsApp</h3>
+              <h3 className="text-base font-extrabold text-gray-900 dark:text-white">
+                {customerConversation?.assignedAgent?.name || "Support"}
+              </h3>
               <CheckCircle2 className="w-4 h-4 text-white fill-[#1da1f2]" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 font-medium">Welcome to WhatsApp</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 font-medium">
+              Welcome to {customerConversation?.assignedAgent?.name ? `${customerConversation.assignedAgent.name}'s Support` : "Support"}
+            </p>
 
             {/* 3 Green Action Buttons */}
             <div className="grid grid-cols-3 gap-2.5 mb-4">

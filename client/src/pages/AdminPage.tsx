@@ -7,12 +7,13 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { AdminChatArea } from '../components/admin/AdminChatArea';
 import { CustomerContextSidebar } from '../components/admin/CustomerContextSidebar';
 import { AdminAnalyticsView } from '../components/admin/AdminAnalyticsView';
+import { AdminSettingsView } from '../components/admin/AdminSettingsView';
 import type { Message } from '../types';
 
 export const AdminPage: React.FC = () => {
   const { isAuthenticated, isLoading, checkAuth, user } = useAuthStore();
   const { fetchConversations, addMessage, activeConversation } = useChatStore();
-  const [currentTab, setCurrentTab] = useState<'chats' | 'analytics'>('chats');
+  const [currentTab, setCurrentTab] = useState<'chats' | 'analytics' | 'settings'>('chats');
   const [showContextPanel, setShowContextPanel] = useState(false);
 
   const navigate = useNavigate();
@@ -141,19 +142,23 @@ export const AdminPage: React.FC = () => {
       <AdminSidebar currentTab={currentTab} onSelectTab={(tab) => setCurrentTab(tab)} />
 
       {currentTab === 'chats' ? (
-        <div className="flex-1 flex min-w-0 overflow-hidden">
-          {/* Pass toggle + state to AdminChatArea so clicking DP opens/closes the panel */}
-          <AdminChatArea
-            onToggleContextPanel={() => setShowContextPanel(p => !p)}
-            showContextPanel={showContextPanel}
-          />
+        <div className={`flex-1 min-w-0 overflow-hidden relative ${activeConversation ? 'flex' : 'hidden md:flex'}`}>
+          <div className="flex-1 min-w-0 h-full flex flex-col">
+            {/* Pass toggle + state to AdminChatArea so clicking DP opens/closes the panel */}
+            <AdminChatArea
+              onToggleContextPanel={() => setShowContextPanel(p => !p)}
+              showContextPanel={showContextPanel}
+            />
+          </div>
           {/* CustomerContextSidebar is HIDDEN by default — only visible when showContextPanel = true */}
           {activeConversation && showContextPanel && (
             <CustomerContextSidebar onClose={() => setShowContextPanel(false)} />
           )}
         </div>
-      ) : (
+      ) : currentTab === 'analytics' ? (
         <AdminAnalyticsView />
+      ) : (
+        <AdminSettingsView />
       )}
     </div>
   );

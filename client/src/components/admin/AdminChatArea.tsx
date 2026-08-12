@@ -6,7 +6,7 @@ import { getSocket } from '../../services/socket';
 import { MessageBubble } from '../chat/MessageBubble';
 import { MessageInput } from '../chat/MessageInput';
 import { VoiceCallModal } from '../chat/VoiceCallModal';
-import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText } from 'lucide-react';
+import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText, ArrowLeft } from 'lucide-react';
 import type { User, Message } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsPdf, exportChatAsTxt } from '../../utils/exportChat';
@@ -17,7 +17,7 @@ interface AdminChatAreaProps {
 }
 
 export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPanel, showContextPanel }) => {
-  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState } = useChatStore();
+  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, setActiveConversation } = useChatStore();
   const { user } = useAuthStore();
   const [agents, setAgents] = useState<User[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -191,8 +191,17 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
   return (
     <div className="flex-1 flex flex-col h-full bg-[#0b141a] relative border-r border-[#222d34] min-w-0 overflow-hidden">
       {/* Workspace Header */}
-      <div className="bg-[#202c33] px-4 py-3 border-b border-[#222d34] flex items-center justify-between shadow-sm z-10">
+      <div className="bg-[#202c33] px-4 py-2 sm:py-3 border-b border-[#222d34] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-sm z-10">
         <div className="flex items-center gap-3">
+          {/* Back Button (Mobile Only) */}
+          <button
+            onClick={() => setActiveConversation(null)}
+            className="p-1.5 hover:bg-white/10 rounded-full md:hidden text-gray-300 hover:text-white mr-0.5 transition-colors"
+            title="Back to chats"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
           <button
             onClick={onToggleContextPanel}
             title="Click to view customer details"
@@ -221,7 +230,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
         </div>
 
         {/* Action Controls & Selectors */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
           {/* AI Auto-Bot Switch */}
           <button
             onClick={() => setIsAiBotActive(!isAiBotActive)}
@@ -240,7 +249,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <select
             value={activeConversation.priority}
             onChange={(e) => handlePriorityChange(e.target.value)}
-            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium"
+            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium max-w-[90px] sm:max-w-none"
           >
             <option value="low">Low Priority</option>
             <option value="medium">Medium Priority</option>
@@ -252,7 +261,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <select
             value={activeConversation.status}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium"
+            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium max-w-[85px] sm:max-w-none"
           >
             <option value="open">🟢 Open</option>
             <option value="pending">🟡 Pending</option>
@@ -264,7 +273,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <select
             value={activeConversation.assignedAgent?._id || ''}
             onChange={(e) => handleAssignAgent(e.target.value)}
-            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium"
+            className="bg-[#111b21] text-xs text-gray-200 border border-gray-700 rounded-lg px-2 py-1 outline-none font-medium max-w-[90px] sm:max-w-none"
           >
             <option value="">Unassigned</option>
             {agents.map((ag) => (
