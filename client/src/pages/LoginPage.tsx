@@ -32,13 +32,13 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#f5f5f7] dark:bg-[#000000] p-4 relative overflow-hidden transition-colors duration-300">
-      {/* Ambient Apple Glow */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/10 dark:bg-blue-600/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-500/10 dark:bg-emerald-600/15 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#efeae2] dark:bg-[#0b141a] p-4 relative overflow-hidden transition-colors duration-300">
+      {/* Ambient WhatsApp Glow */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#00a884]/15 dark:bg-[#00a884]/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-[#005c4b]/20 dark:bg-[#005c4b]/30 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Main Glass Card */}
-      <div className="w-full max-w-[440px] bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-2xl rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_70px_rgba(0,0,0,0.6)] p-8 border border-black/[0.06] dark:border-white/[0.1] relative transition-all duration-300">
+      <div className="w-full max-w-[440px] bg-white/90 dark:bg-[#202c33]/90 backdrop-blur-2xl rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] dark:shadow-[0_25px_70px_rgba(0,0,0,0.7)] p-8 border border-black/[0.08] dark:border-white/[0.1] relative transition-all duration-300">
         
         {/* macOS Window Controls & Theme Toggle Header */}
         <div className="flex items-center justify-between mb-7">
@@ -52,14 +52,14 @@ export const LoginPage: React.FC = () => {
 
         {/* Brand Header */}
         <div className="text-center mb-7">
-          <div className="w-16 h-16 bg-gradient-to-tr from-[#0071e3] to-[#409cff] dark:from-[#0a84ff] dark:to-[#5e5ce6] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/25 ring-1 ring-white/20">
+          <div className="w-16 h-16 bg-[#00a884] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#00a884]/30 ring-1 ring-white/20">
             <MessageSquare className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+          <h1 className="text-2xl font-bold tracking-tight text-[#111b21] dark:text-[#e9edef]">
             Workspace Portal
           </h1>
-          <p className="text-[13px] text-[#86868b] mt-1 font-medium">
-            Customer Support & Admin Console
+          <p className="text-[13px] text-[#667781] dark:text-[#8696a0] mt-1 font-medium">
+            WhatsApp Web Enterprise Support Console
           </p>
         </div>
 
@@ -71,34 +71,34 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[12px] font-semibold text-[#1d1d1f] dark:text-[#a1a1a6] mb-1.5 ml-1">
+            <label className="block text-[12px] font-semibold text-[#111b21] dark:text-[#8696a0] mb-1.5 ml-1">
               Work Email
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-[#86868b] absolute left-3.5 top-3.5" />
+              <Mail className="w-4 h-4 text-[#8696a0] absolute left-3.5 top-3.5" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.05] dark:border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:border-[#0071e3] dark:focus:border-[#0a84ff] focus:bg-white dark:focus:bg-[#1c1c1e] focus:ring-4 focus:ring-blue-500/15 outline-none transition-all"
+                className="w-full bg-[#f0f2f5] dark:bg-[#2a3942] border border-black/[0.06] dark:border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] focus:border-[#00a884] focus:bg-white dark:focus:bg-[#202c33] focus:ring-4 focus:ring-[#00a884]/15 outline-none transition-all"
                 placeholder="name@company.com"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-[12px] font-semibold text-[#1d1d1f] dark:text-[#a1a1a6] mb-1.5 ml-1">
+            <label className="block text-[12px] font-semibold text-[#111b21] dark:text-[#8696a0] mb-1.5 ml-1">
               Password
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-[#86868b] absolute left-3.5 top-3.5" />
+              <Lock className="w-4 h-4 text-[#8696a0] absolute left-3.5 top-3.5" />
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.05] dark:border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] focus:border-[#0071e3] dark:focus:border-[#0a84ff] focus:bg-white dark:focus:bg-[#1c1c1e] focus:ring-4 focus:ring-blue-500/15 outline-none transition-all"
+                className="w-full bg-[#f0f2f5] dark:bg-[#2a3942] border border-black/[0.06] dark:border-white/[0.08] rounded-xl pl-10 pr-4 py-3 text-sm text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] focus:border-[#00a884] focus:bg-white dark:focus:bg-[#202c33] focus:ring-4 focus:ring-[#00a884]/15 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -107,7 +107,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-2 bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#0a84ff] dark:hover:bg-[#409cff] text-white py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-[0.98] shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full mt-2 bg-[#00a884] hover:bg-[#008f70] text-white py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-[0.98] shadow-md shadow-[#00a884]/25 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
@@ -123,10 +123,10 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Apple Chips Demo Quick Login */}
+        {/* Demo Quick Login Pills */}
         <div className="mt-6 pt-5 border-t border-black/[0.06] dark:border-white/[0.08]">
           <div className="flex items-center justify-center gap-1.5 mb-3 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+            <Sparkles className="w-3.5 h-3.5 text-[#00a884]" />
             <span>Quick Demo Accounts</span>
           </div>
 
@@ -134,14 +134,14 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleQuickLogin('admin@support.com', 'admin123')}
-              className="group p-2.5 bg-[#f5f5f7] hover:bg-[#ebebf0] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-left transition-all active:scale-[0.97]"
+              className="group p-2.5 bg-[#f0f2f5] hover:bg-[#e9edef] dark:bg-[#2a3942] dark:hover:bg-[#32434d] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-left transition-all active:scale-[0.97]"
             >
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xs font-bold">
+                <div className="w-7 h-7 rounded-lg bg-[#00a884]/20 text-[#00a884] flex items-center justify-center text-xs font-bold">
                   A
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-blue-500 transition-colors">Admin</p>
+                  <p className="text-xs font-semibold text-[#111b21] dark:text-[#e9edef] group-hover:text-[#00a884] transition-colors">Admin</p>
                   <p className="text-[10px] text-[#86868b]">Full Privileges</p>
                 </div>
               </div>
@@ -150,15 +150,15 @@ export const LoginPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleQuickLogin('agent@support.com', 'agent123')}
-              className="group p-2.5 bg-[#f5f5f7] hover:bg-[#ebebf0] dark:bg-[#2c2c2e] dark:hover:bg-[#3a3a3c] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-left transition-all active:scale-[0.97]"
+              className="group p-2.5 bg-[#f0f2f5] hover:bg-[#e9edef] dark:bg-[#2a3942] dark:hover:bg-[#32434d] rounded-xl border border-black/[0.04] dark:border-white/[0.06] text-left transition-all active:scale-[0.97]"
             >
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-xs font-bold">
                   S
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-emerald-500 transition-colors">Support Agent</p>
-                  <p className="text-[10px] text-[#86868b]">Live Chat Desk</p>
+                  <p className="text-xs font-semibold text-[#111b21] dark:text-[#e9edef] group-hover:text-[#00a884] transition-colors">Support Desk</p>
+                  <p className="text-[10px] text-[#86868b]">Live Desk</p>
                 </div>
               </div>
             </button>
@@ -167,8 +167,8 @@ export const LoginPage: React.FC = () => {
 
         {/* Footer Security Badge */}
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-[#86868b]">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#34c759]" />
-          <span>End-to-End Secure • Apple UI Engine</span>
+          <ShieldCheck className="w-3.5 h-3.5 text-[#00a884]" />
+          <span>End-to-End Encrypted • WhatsApp Live Platform</span>
         </div>
       </div>
     </div>

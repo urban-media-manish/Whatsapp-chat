@@ -264,7 +264,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   if (isRecordingVoice) {
     return (
-      <div className="p-3 bg-[#f5f5f7] dark:bg-[#161618] border-t border-black/[0.06] dark:border-white/[0.08]">
+      <div className="p-3 bg-[#f0f2f5] dark:bg-[#202c33] border-t border-black/[0.06] dark:border-white/[0.08]">
         <VoiceRecorder
           onRecorded={handleVoiceRecorded}
           onCancel={() => setIsRecordingVoice(false)}
@@ -274,7 +274,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }
 
   return (
-    <div className="relative bg-[#f5f5f7]/90 dark:bg-[#161618]/90 backdrop-blur-2xl px-3 py-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col gap-2 select-none w-full transition-colors">
+    <div className="relative bg-[#f0f2f5]/90 dark:bg-[#202c33]/90 backdrop-blur-2xl px-3 py-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col gap-2 select-none w-full transition-colors">
       {/* Hidden File Inputs */}
       <input
         type="file"
@@ -294,12 +294,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Quoted Reply Banner */}
       {replyToMessage && (
-        <div className="flex items-center justify-between bg-black/[0.04] dark:bg-white/[0.06] border-l-2 border-[#0071e3] dark:border-[#0a84ff] px-3 py-2 rounded-r-xl text-xs backdrop-blur-md">
+        <div className="flex items-center justify-between bg-black/[0.04] dark:bg-white/[0.06] border-l-3 border-[#00a884] px-3 py-2 rounded-r-xl text-xs backdrop-blur-md">
           <div>
-            <span className="font-semibold text-[#0071e3] dark:text-[#0a84ff]">Replying to {replyToMessage.senderName}</span>
-            <p className="truncate text-[#6e6e73] dark:text-[#a1a1a6] text-[11px] mt-0.5">{replyToMessage.content || replyToMessage.fileName}</p>
+            <span className="font-semibold text-[#00a884]">Replying to {replyToMessage.senderName}</span>
+            <p className="truncate text-[#667781] dark:text-[#8696a0] text-[11px] mt-0.5">{replyToMessage.content || replyToMessage.fileName}</p>
           </div>
-          <button onClick={() => setReplyToMessage(null)} className="p-1 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white">
+          <button onClick={() => setReplyToMessage(null)} className="p-1 rounded-full text-[#8696a0] hover:text-[#111b21] dark:hover:text-white">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -307,8 +307,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Canned Quick Replies Menu */}
       {showQuickReplies && quickReplies.length > 0 && (
-        <div className="absolute bottom-16 left-4 right-4 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] p-2 max-h-48 overflow-y-auto">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#86868b] uppercase tracking-wider px-2.5 py-1.5 border-b border-black/[0.04] dark:border-white/[0.06] mb-1">
+        <div className="absolute bottom-16 left-4 right-4 z-40 bg-white/95 dark:bg-[#233138]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] p-2 max-h-48 overflow-y-auto">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#8696a0] uppercase tracking-wider px-2.5 py-1.5 border-b border-black/[0.04] dark:border-white/[0.06] mb-1">
             <Zap className="w-3.5 h-3.5 text-amber-500" /> Canned Shortcuts
           </div>
           {quickReplies.map((qr) => (
@@ -318,13 +318,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 setText(qr.content);
                 setShowQuickReplies(false);
               }}
-              className="w-full text-left p-2.5 rounded-xl hover:bg-blue-500/10 dark:hover:bg-white/10 transition-colors flex justify-between items-center"
+              className="w-full text-left p-2.5 rounded-xl hover:bg-[#00a884]/10 dark:hover:bg-white/10 transition-colors flex justify-between items-center"
             >
               <div>
-                <span className="font-semibold text-xs text-[#0071e3] dark:text-[#0a84ff]">/{qr.shortcut}</span>
-                <p className="text-xs text-[#1d1d1f] dark:text-[#f5f5f7] truncate mt-0.5">{qr.content}</p>
+                <span className="font-semibold text-xs text-[#00a884]">/{qr.shortcut}</span>
+                <p className="text-xs text-[#111b21] dark:text-[#e9edef] truncate mt-0.5">{qr.content}</p>
               </div>
-              <span className="text-[10px] text-[#86868b] bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 rounded-md font-medium">{qr.title}</span>
+              <span className="text-[10px] text-[#8696a0] bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 rounded-md font-medium">{qr.title}</span>
             </button>
           ))}
         </div>
@@ -332,26 +332,26 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* iOS Action Sheet Attachment Menu */}
       {showAttachMenu && (
-        <div className="absolute bottom-16 left-3 z-40 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl p-2 rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] flex flex-col gap-1 min-w-[210px] animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute bottom-16 left-3 z-40 bg-white/95 dark:bg-[#233138]/95 backdrop-blur-2xl p-2 rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] flex flex-col gap-1 min-w-[210px] animate-in fade-in slide-in-from-bottom-2 duration-150">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm"><Image className="w-4 h-4" /></div>
+            <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-sm"><Image className="w-4 h-4" /></div>
             <span>Photos & Videos</span>
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center shadow-sm"><FileText className="w-4 h-4" /></div>
+            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm"><FileText className="w-4 h-4" /></div>
             <span>Document / PDF</span>
           </button>
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm"><Camera className="w-4 h-4" /></div>
+            <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm"><Camera className="w-4 h-4" /></div>
             <span>Take Photo</span>
           </button>
           <button
@@ -359,9 +359,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               setShowAttachMenu(false);
               setIsRecordingVoice(true);
             }}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm"><Music className="w-4 h-4" /></div>
+            <div className="w-8 h-8 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-sm"><Music className="w-4 h-4" /></div>
             <span>Audio Message</span>
           </button>
         </div>
@@ -381,42 +381,42 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           type="button"
           onClick={() => setShowAttachMenu(!showAttachMenu)}
-          className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
+          className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
           title="Attachments"
         >
           <Plus className="w-4 h-4" />
         </button>
 
         {/* Input Capsule Box */}
-        <div className="flex-1 flex items-center bg-white dark:bg-[#2c2c2e] rounded-full px-3.5 py-1.5 border border-black/[0.08] dark:border-white/[0.08] focus-within:border-[#0071e3] dark:focus-within:border-[#0a84ff] focus-within:ring-2 focus-within:ring-blue-500/15 shadow-sm min-w-0 transition-all">
+        <div className="flex-1 flex items-center bg-white dark:bg-[#2a3942] rounded-full px-3.5 py-1.5 border border-black/[0.08] dark:border-white/[0.08] focus-within:border-[#00a884] focus-within:ring-2 focus-within:ring-[#00a884]/20 shadow-xs min-w-0 transition-all">
           <input
             type="text"
             value={text}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={placeholder || "iMessage / Live Chat..."}
-            className="w-full bg-transparent text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] text-[13px] sm:text-[14px] outline-none border-none pr-1.5 font-normal"
+            placeholder={placeholder || "Type a message..."}
+            className="w-full bg-transparent text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] text-[13px] sm:text-[14px] outline-none border-none pr-1.5 font-normal"
           />
 
           {/* Emoji Button inside capsule */}
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-1 text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] transition-colors focus:outline-none flex-shrink-0"
+            className="p-1 text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
             title="Emoji"
           >
             <Smile className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Apple Send Arrow / Mic Button */}
+        {/* Green Send Arrow / Mic Button */}
         {text.trim() ? (
           <button
             type="button"
             onClick={handleSendText}
             disabled={isUploading}
-            className="w-8 h-8 rounded-full bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#0a84ff] dark:hover:bg-[#409cff] text-white transition-all active:scale-90 shadow-md flex items-center justify-center flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white transition-all active:scale-90 shadow-md flex items-center justify-center flex-shrink-0"
             title="Send"
           >
             <ArrowUp className="w-4 h-4 stroke-[2.5]" />
@@ -425,7 +425,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           <button
             type="button"
             onClick={() => setIsRecordingVoice(true)}
-            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#6e6e73] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
             title="Voice Note"
           >
             <Mic className="w-4 h-4" />

@@ -44,32 +44,32 @@ export const AdminSettingsView: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#f5f5f7] dark:bg-[#000000] text-[#86868b]">
-        <div className="animate-spin w-8 h-8 border-2 border-[#0071e3] border-t-transparent rounded-full" />
+      <div className="flex-1 flex items-center justify-center bg-[#efeae2] dark:bg-[#0b141a] text-[#8696a0]">
+        <div className="animate-spin w-8 h-8 border-2 border-[#00a884] border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-[#f5f5f7] dark:bg-[#000000] p-6 lg:p-8 overflow-y-auto space-y-6 text-[#1d1d1f] dark:text-[#f5f5f7] transition-colors duration-300">
+    <div className="flex-1 bg-[#efeae2] dark:bg-[#0b141a] p-6 lg:p-8 overflow-y-auto space-y-6 text-[#111b21] dark:text-[#e9edef] transition-colors duration-300">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#0071e3] dark:text-[#0a84ff]" /> Workspace Configuration
+        <h1 className="text-2xl font-bold tracking-tight text-[#111b21] dark:text-[#e9edef] flex items-center gap-2">
+          <Settings className="w-6 h-6 text-[#00a884]" /> Workspace Configuration
         </h1>
-        <p className="text-xs text-[#86868b] mt-1 font-medium">Configure global automation behaviors, greeting templates, and system policies</p>
+        <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1 font-medium">Configure WhatsApp automation behaviors, greeting templates, and system policies</p>
       </div>
 
       {/* Main Settings Card */}
-      <form onSubmit={handleSave} className="max-w-2xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-2xl p-6 rounded-[24px] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-5">
+      <form onSubmit={handleSave} className="max-w-2xl bg-white/90 dark:bg-[#202c33]/90 backdrop-blur-2xl p-6 rounded-[24px] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-5">
         
         {/* Dynamic Welcome Message Section */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+          <label className="block text-sm font-bold text-[#111b21] dark:text-[#e9edef]">
             Auto-Greeting Template
           </label>
-          <p className="text-xs text-[#86868b] leading-relaxed">
-            Sent automatically to new customer sessions as soon as they provide their name and phone number.
+          <p className="text-xs text-[#667781] dark:text-[#8696a0] leading-relaxed">
+            Sent automatically to new WhatsApp customer sessions as soon as they provide their name and phone number.
           </p>
 
           <div className="relative mt-2">
@@ -78,18 +78,18 @@ export const AdminSettingsView: React.FC = () => {
               onChange={(e) => setWelcomeMessage(e.target.value)}
               rows={4}
               placeholder="Write your welcome greeting here..."
-              className="w-full bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm text-[#1d1d1f] dark:text-[#f5f5f7] outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-blue-500/15 transition-all resize-none placeholder-[#86868b]"
+              className="w-full bg-[#f0f2f5] dark:bg-[#2a3942] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm text-[#111b21] dark:text-[#e9edef] outline-none focus:border-[#00a884] focus:ring-2 focus:ring-[#00a884]/20 transition-all resize-none placeholder-[#8696a0]"
             />
           </div>
         </div>
 
         {/* Tip Box */}
-        <div className="bg-[#f5f5f7] dark:bg-[#2c2c2e] p-4 rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-start gap-3">
+        <div className="bg-[#f0f2f5] dark:bg-[#2a3942] p-4 rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-start gap-3">
           <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-          <div className="text-xs text-[#1d1d1f] dark:text-[#f5f5f7] space-y-1">
+          <div className="text-xs text-[#111b21] dark:text-[#e9edef] space-y-1">
             <p className="font-bold">Dynamic Name Replacement</p>
-            <p className="text-[#86868b] leading-relaxed">
-              Use <code className="text-[#0071e3] dark:text-[#0a84ff] bg-blue-500/10 px-1.5 py-0.5 rounded font-mono font-bold">{'{name}'}</code> in your template. The system will automatically substitute the customer's full name.
+            <p className="text-[#667781] dark:text-[#8696a0] leading-relaxed">
+              Use <code className="text-[#00a884] bg-[#00a884]/15 px-1.5 py-0.5 rounded font-mono font-bold">{'{name}'}</code> in your template. The system will automatically substitute the customer's full name.
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export const AdminSettingsView: React.FC = () => {
           <button
             type="submit"
             disabled={isSaving}
-            className="bg-[#0071e3] hover:bg-[#0077ed] dark:bg-[#0a84ff] text-white font-semibold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 disabled:opacity-50"
+            className="bg-[#00a884] hover:bg-[#008f70] text-white font-semibold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#00a884]/20 active:scale-98 disabled:opacity-50"
           >
             {isSaving ? (
               <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />

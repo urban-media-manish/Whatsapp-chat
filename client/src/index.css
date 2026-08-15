@@ -2,52 +2,50 @@
 
 @layer base {
   :root {
-    --bg-canvas: #f5f5f7;
+    --bg-canvas: #efeae2;
     --bg-surface: #ffffff;
     --bg-surface-elevated: #ffffff;
-    --bg-secondary: #fbfbfd;
-    --bg-tertiary: #f0f0f2;
-    --bg-chat-area: #f5f5f7;
-    --text-primary: #1d1d1f;
-    --text-secondary: #6e6e73;
-    --text-muted: #86868b;
-    --border-subtle: rgba(0, 0, 0, 0.07);
-    --border-strong: rgba(0, 0, 0, 0.12);
-    --bubble-sent: #0071e3;
-    --bubble-sent-text: #ffffff;
+    --bg-secondary: #f0f2f5;
+    --bg-tertiary: #e9edef;
+    --bg-chat-area: #efeae2;
+    --text-primary: #111b21;
+    --text-secondary: #667781;
+    --text-muted: #8696a0;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.14);
+    --bubble-sent: #d9fdd3;
+    --bubble-sent-text: #111b21;
     --bubble-received: #ffffff;
-    --bubble-received-text: #1d1d1f;
-    --accent-blue: #0071e3;
-    --accent-blue-hover: #0077ed;
-    --accent-green: #34c759;
-    --accent-indigo: #5856d6;
-    --glass-bg: rgba(255, 255, 255, 0.78);
-    --glass-border: rgba(255, 255, 255, 0.65);
+    --bubble-received-text: #111b21;
+    --accent-green: #00a884;
+    --accent-green-hover: #008f70;
+    --accent-header: #008069;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.7);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
-    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   }
 
   .dark {
-    --bg-canvas: #000000;
-    --bg-surface: #161618;
-    --bg-surface-elevated: #1c1c1e;
-    --bg-secondary: #121214;
-    --bg-tertiary: #242426;
-    --bg-chat-area: #000000;
-    --text-primary: #f5f5f7;
-    --text-secondary: #a1a1a6;
-    --text-muted: #86868b;
+    --bg-canvas: #0b141a;
+    --bg-surface: #111b21;
+    --bg-surface-elevated: #202c33;
+    --bg-secondary: #111b21;
+    --bg-tertiary: #222d34;
+    --bg-chat-area: #0b141a;
+    --text-primary: #e9edef;
+    --text-secondary: #8696a0;
+    --text-muted: #667781;
     --border-subtle: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.14);
-    --bubble-sent: #0a84ff;
-    --bubble-sent-text: #ffffff;
-    --bubble-received: #1c1c1e;
-    --bubble-received-text: #f5f5f7;
-    --accent-blue: #0a84ff;
-    --accent-blue-hover: #409cff;
-    --accent-green: #30d158;
-    --accent-indigo: #5e5ce6;
-    --glass-bg: rgba(24, 24, 28, 0.75);
+    --bubble-sent: #005c4b;
+    --bubble-sent-text: #e9edef;
+    --bubble-received: #202c33;
+    --bubble-received-text: #e9edef;
+    --accent-green: #00a884;
+    --accent-green-hover: #008f70;
+    --accent-header: #202c33;
+    --glass-bg: rgba(32, 44, 51, 0.82);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
     --card-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.06);
@@ -77,7 +75,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   box-shadow: var(--card-shadow);
-  border-radius: 20px;
+  border-radius: 22px;
 }
 
 .apple-glass-header {
@@ -87,55 +85,22 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Subtle Apple Subtle Input */
-.apple-input {
-  background: var(--bg-tertiary);
-  border: 1px solid transparent;
-  color: var(--text-primary);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.apple-input:focus {
-  border-color: var(--accent-blue);
-  background: var(--bg-surface);
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
-  outline: none;
-}
-
-/* Apple Pill Tabs */
-.apple-segmented-control {
-  background: var(--bg-tertiary);
-  padding: 3px;
-  border-radius: 12px;
-  border: 1px solid var(--border-subtle);
-}
-
-.apple-segmented-item {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.apple-segmented-item.active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.08);
-}
-
-/* Apple Buttons */
-.apple-btn-primary {
-  background: var(--accent-blue);
+/* Apple Buttons with WhatsApp Emerald */
+.apple-btn-whatsapp {
+  background: #00a884;
   color: #ffffff;
-  font-weight: 500;
-  border-radius: 12px;
+  font-weight: 600;
+  border-radius: 14px;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.apple-btn-primary:hover {
-  background: var(--accent-blue-hover);
+.apple-btn-whatsapp:hover {
+  background: #008f70;
   transform: translateY(-0.5px);
-  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.28);
+  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.35);
 }
 
-.apple-btn-primary:active {
+.apple-btn-whatsapp:active {
   transform: scale(0.98);
 }
 
@@ -148,24 +113,26 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(134, 134, 139, 0.25);
+  background: rgba(134, 150, 160, 0.25);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(134, 134, 139, 0.5);
+  background: rgba(134, 150, 160, 0.5);
 }
 
-/* Chat Wallpaper subtle overlay */
+/* Authentic WhatsApp Wallpaper with subtle Apple overlay */
 .chat-wallpaper {
-  background-color: var(--bg-chat-area) !important;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-color: #efeae2 !important;
+  background-image: url("/whatsapp-light-bg.svg?v=10"), radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-repeat: repeat;
+  background-size: 412px 412px, 24px 24px;
 }
 
 .dark .chat-wallpaper {
-  background-color: #000000 !important;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
+  background-color: #0b141a !important;
+  background-image: url("/whatsapp-dark-bg.svg?v=10"), radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-repeat: repeat;
+  background-size: 412px 412px, 24px 24px;
 }
 
 /* iOS/macOS Haptic Pulse Animation */
