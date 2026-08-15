@@ -32,12 +32,10 @@ export const AdminPage: React.FC = () => {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Close context panel when switching to a different conversation
   useEffect(() => {
     setShowContextPanel(false);
   }, [activeConversation?._id]);
 
-  // Press Escape (Esc) key to close active chat (WhatsApp Web shortcut)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -97,10 +95,8 @@ export const AdminPage: React.FC = () => {
     };
   }, [socket]);
 
-  // Auto-rejoin agent workspace & active conversation on connect/reconnect
   useEffect(() => {
     const handleConnect = () => {
-      console.log('🔌 Agent Socket connected: re-joining workspace...');
       if (user?._id) {
         socket.emit('join_agent_workspace', { userId: user._id });
       }
@@ -126,10 +122,10 @@ export const AdminPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#111b21] text-gray-400">
+      <div className="h-screen w-full flex items-center justify-center bg-[#f5f5f7] dark:bg-[#000000] text-[#86868b]">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin w-10 h-10 border-4 border-[#00a884] border-t-transparent rounded-full" />
-          <p className="text-sm font-semibold text-gray-300">Loading Workspace...</p>
+          <div className="animate-spin w-8 h-8 border-2 border-[#0071e3] border-t-transparent rounded-full" />
+          <p className="text-xs font-medium text-[#86868b]">Loading Workspace...</p>
         </div>
       </div>
     );
@@ -138,19 +134,17 @@ export const AdminPage: React.FC = () => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="h-screen w-full flex bg-[#111b21] overflow-hidden select-none">
+    <div className="h-screen w-full flex bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-300 font-sans">
       <AdminSidebar currentTab={currentTab} onSelectTab={(tab) => setCurrentTab(tab)} />
 
       {currentTab === 'chats' ? (
         <div className={`flex-1 min-w-0 overflow-hidden relative ${activeConversation ? 'flex' : 'hidden md:flex'}`}>
           <div className="flex-1 min-w-0 h-full flex flex-col">
-            {/* Pass toggle + state to AdminChatArea so clicking DP opens/closes the panel */}
             <AdminChatArea
               onToggleContextPanel={() => setShowContextPanel(p => !p)}
               showContextPanel={showContextPanel}
             />
           </div>
-          {/* CustomerContextSidebar is HIDDEN by default — only visible when showContextPanel = true */}
           {activeConversation && showContextPanel && (
             <CustomerContextSidebar onClose={() => setShowContextPanel(false)} />
           )}
