@@ -2,99 +2,146 @@
 
 @layer base {
   :root {
-    --bg-primary: #f0f2f5;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #f7f9fa;
-    --bg-chat: #efeae2;
+    --bg-canvas: #efeae2;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #ffffff;
+    --bg-secondary: #f0f2f5;
+    --bg-tertiary: #e9edef;
+    --bg-chat-area: #efeae2;
     --text-primary: #111b21;
     --text-secondary: #667781;
     --text-muted: #8696a0;
-    --border-color: #e9edef;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.14);
     --bubble-sent: #d9fdd3;
+    --bubble-sent-text: #111b21;
     --bubble-received: #ffffff;
-    --accent: #00a884;
-    --accent-hover: #008f70;
-    --header-bg: #f0f2f5;
-    --sidebar-bg: #ffffff;
+    --bubble-received-text: #111b21;
+    --accent-green: #00a884;
+    --accent-green-hover: #008f70;
+    --accent-header: #008069;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.7);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+    --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
   }
 
   .dark {
-    --bg-primary: #111b21;
-    --bg-secondary: #202c33;
-    --bg-tertiary: #111b21;
-    --bg-chat: #0b141a;
+    --bg-canvas: #0b141a;
+    --bg-surface: #111b21;
+    --bg-surface-elevated: #202c33;
+    --bg-secondary: #111b21;
+    --bg-tertiary: #222d34;
+    --bg-chat-area: #0b141a;
     --text-primary: #e9edef;
     --text-secondary: #8696a0;
     --text-muted: #667781;
-    --border-color: #222d34;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
     --bubble-sent: #005c4b;
+    --bubble-sent-text: #e9edef;
     --bubble-received: #202c33;
-    --accent: #00a884;
-    --accent-hover: #008f70;
-    --header-bg: #202c33;
-    --sidebar-bg: #111b21;
+    --bubble-received-text: #e9edef;
+    --accent-green: #00a884;
+    --accent-green-hover: #008f70;
+    --accent-header: #202c33;
+    --glass-bg: rgba(32, 44, 51, 0.82);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+    --card-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.06);
   }
 
   body {
-    background-color: var(--bg-primary);
+    background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Plus Jakarta Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    letter-spacing: -0.012em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 }
 
-/* Custom Scrollbars */
+/* Apple Frosted Glass / Vibrancy */
+.apple-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--glass-shadow);
+}
+
+.apple-glass-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--card-shadow);
+  border-radius: 22px;
+}
+
+.apple-glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Apple Buttons with WhatsApp Emerald */
+.apple-btn-whatsapp {
+  background: #00a884;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 14px;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-btn-whatsapp:hover {
+  background: #008f70;
+  transform: translateY(-0.5px);
+  box-shadow: 0 4px 14px rgba(0, 168, 132, 0.35);
+}
+
+.apple-btn-whatsapp:active {
+  transform: scale(0.98);
+}
+
+/* Ultra-thin Minimalist macOS Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(134, 150, 160, 0.3);
-  border-radius: 3px;
+  background: rgba(134, 150, 160, 0.25);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(134, 150, 160, 0.6);
+  background: rgba(134, 150, 160, 0.5);
 }
 
-/* WhatsApp Light & Dark Wallpaper Pattern Overlay */
+/* Authentic WhatsApp Wallpaper with subtle Apple overlay */
 .chat-wallpaper {
-  background-color: #0b141a !important;
-  background-image: url("/whatsapp-dark-bg.svg?v=10") !important;
-  background-repeat: repeat !important;
-  background-size: 412px 412px !important;
-}
-
-html:not(.dark) .chat-wallpaper {
   background-color: #efeae2 !important;
-  background-image: url("/whatsapp-light-bg.svg?v=10") !important;
-  background-repeat: repeat !important;
-  background-size: 412px 412px !important;
+  background-image: url("/whatsapp-light-bg.svg?v=10"), radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-repeat: repeat;
+  background-size: 412px 412px, 24px 24px;
 }
 
-html.dark .chat-wallpaper {
+.dark .chat-wallpaper {
   background-color: #0b141a !important;
-  background-image: url("/whatsapp-dark-bg.svg?v=10") !important;
-  background-repeat: repeat !important;
-  background-size: 412px 412px !important;
+  background-image: url("/whatsapp-dark-bg.svg?v=10"), radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-repeat: repeat;
+  background-size: 412px 412px, 24px 24px;
 }
 
-/* Glassmorphism & Cards */
-.glass-panel {
-  background: rgba(32, 44, 51, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Pulse animation for voice recording */
-@keyframes audioPulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.15); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+/* iOS/macOS Haptic Pulse Animation */
+@keyframes applePulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.08); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.9; }
 }
 
 .animate-recording {
-  animation: audioPulse 1.5s infinite ease-in-out;
+  animation: applePulse 1.6s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }

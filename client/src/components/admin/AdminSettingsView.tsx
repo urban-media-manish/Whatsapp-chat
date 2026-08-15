@@ -32,7 +32,7 @@ export const AdminSettingsView: React.FC = () => {
     setToastMessage(null);
     try {
       await api.saveSettings(welcomeMessage);
-      setToastMessage('Settings saved successfully!');
+      setToastMessage('Settings updated successfully!');
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err: any) {
       console.error(err);
@@ -44,68 +44,65 @@ export const AdminSettingsView: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[#111b21] text-gray-400">
-        <div className="animate-spin w-8 h-8 border-4 border-[#00a884] border-t-transparent rounded-full" />
+      <div className="flex-1 flex items-center justify-center bg-[#efeae2] dark:bg-[#0b141a] text-[#8696a0]">
+        <div className="animate-spin w-8 h-8 border-2 border-[#00a884] border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-[#0b141a] p-4 sm:p-6 overflow-y-auto space-y-6 text-gray-100">
+    <div className="flex-1 bg-[#efeae2] dark:bg-[#0b141a] p-6 lg:p-8 overflow-y-auto space-y-6 text-[#111b21] dark:text-[#e9edef] transition-colors duration-300">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-          <Settings className="w-6 h-6 text-[#00a884]" /> Workspace & Support Settings
+        <h1 className="text-2xl font-bold tracking-tight text-[#111b21] dark:text-[#e9edef] flex items-center gap-2">
+          <Settings className="w-6 h-6 text-[#00a884]" /> Workspace Configuration
         </h1>
-        <p className="text-xs text-gray-400 mt-1">Configure global automation behaviors, welcome greetings, and integrations</p>
+        <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1 font-medium">Configure WhatsApp automation behaviors, greeting templates, and system policies</p>
       </div>
 
-      {/* Main Settings Form */}
-      <form onSubmit={handleSave} className="max-w-2xl bg-[#202c33] p-5 sm:p-6 rounded-2xl border border-gray-800 shadow-xl space-y-5">
+      {/* Main Settings Card */}
+      <form onSubmit={handleSave} className="max-w-2xl bg-white/90 dark:bg-[#202c33]/90 backdrop-blur-2xl p-6 rounded-[24px] border border-black/[0.06] dark:border-white/[0.08] shadow-xs space-y-5">
         
         {/* Dynamic Welcome Message Section */}
         <div className="space-y-2">
-          <label className="block text-sm font-bold text-gray-200">
-            Auto-Welcome Message Template
+          <label className="block text-sm font-bold text-[#111b21] dark:text-[#e9edef]">
+            Auto-Greeting Template
           </label>
-          <p className="text-xs text-gray-400 leading-relaxed">
-            This message will be sent automatically as the first system greeting to the customer as soon as they initialize their session (adds name & phone number).
+          <p className="text-xs text-[#667781] dark:text-[#8696a0] leading-relaxed">
+            Sent automatically to new WhatsApp customer sessions as soon as they provide their name and phone number.
           </p>
 
           <div className="relative mt-2">
             <textarea
               value={welcomeMessage}
               onChange={(e) => setWelcomeMessage(e.target.value)}
-              rows={5}
-              placeholder="Write your welcome message here..."
-              className="w-full bg-[#111b21] border border-gray-700/80 rounded-xl px-4 py-3 text-sm text-gray-200 outline-none focus:border-[#00a884] transition-colors resize-none placeholder-gray-600"
+              rows={4}
+              placeholder="Write your welcome greeting here..."
+              className="w-full bg-[#f0f2f5] dark:bg-[#2a3942] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-4 py-3 text-sm text-[#111b21] dark:text-[#e9edef] outline-none focus:border-[#00a884] focus:ring-2 focus:ring-[#00a884]/20 transition-all resize-none placeholder-[#8696a0]"
             />
           </div>
         </div>
 
-        {/* Tip Box explaining Placeholders */}
-        <div className="bg-[#111b21] p-4 rounded-xl border border-gray-800 flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-gray-300 space-y-1">
-            <p className="font-bold text-gray-200">Tip: Use dynamic placeholders!</p>
-            <p className="leading-relaxed">
-              Use <code className="text-[#00a884] bg-[#00a884]/10 px-1.5 py-0.5 rounded font-mono font-bold">{'{name}'}</code> inside the template. The backend will automatically replace it with the customer's full name.
-            </p>
-            <p className="text-gray-400 italic mt-1 font-mono">
-              Example: "Hello {'{name}'}! Welcome to support. An agent will join you soon."
+        {/* Tip Box */}
+        <div className="bg-[#f0f2f5] dark:bg-[#2a3942] p-4 rounded-xl border border-black/[0.04] dark:border-white/[0.06] flex items-start gap-3">
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div className="text-xs text-[#111b21] dark:text-[#e9edef] space-y-1">
+            <p className="font-bold">Dynamic Name Replacement</p>
+            <p className="text-[#667781] dark:text-[#8696a0] leading-relaxed">
+              Use <code className="text-[#00a884] bg-[#00a884]/15 px-1.5 py-0.5 rounded font-mono font-bold">{'{name}'}</code> in your template. The system will automatically substitute the customer's full name.
             </p>
           </div>
         </div>
 
-        {/* Alert/Feedback Banners */}
+        {/* Feedback Banners */}
         {toastMessage && (
-          <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-3.5 rounded-xl text-xs flex items-center gap-2">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl text-xs flex items-center gap-2 font-medium">
             <CheckCircle className="w-4 h-4 shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
         {errorMessage && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3.5 rounded-xl text-xs flex items-center gap-2">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 p-3 rounded-xl text-xs flex items-center gap-2 font-medium">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
@@ -116,14 +113,14 @@ export const AdminSettingsView: React.FC = () => {
           <button
             type="submit"
             disabled={isSaving}
-            className="bg-[#00a884] hover:bg-[#008f70] disabled:bg-[#00a884]/50 text-white font-bold text-sm px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
+            className="bg-[#00a884] hover:bg-[#008f70] text-white font-semibold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#00a884]/20 active:scale-98 disabled:opacity-50"
           >
             {isSaving ? (
               <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
             ) : (
               <Save className="w-4 h-4" />
             )}
-            <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
+            <span>{isSaving ? 'Saving...' : 'Apply Changes'}</span>
           </button>
         </div>
       </form>

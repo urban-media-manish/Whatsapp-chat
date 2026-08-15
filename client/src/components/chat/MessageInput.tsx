@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Smile, Paperclip, Mic, Send, Image, FileText, Music, X, Zap, Camera } from 'lucide-react';
+import { Smile, Mic, ArrowUp, Image, FileText, Music, X, Zap, Camera, Plus } from 'lucide-react';
 import { EmojiPickerModal } from './EmojiPickerModal';
 import { VoiceRecorder } from './VoiceRecorder';
 import { PastedImageModal } from './PastedImageModal';
@@ -47,7 +47,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [isAgentView]);
 
-  // Clean up typing status on unmount or conversation change
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
@@ -90,14 +89,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     const val = e.target.value;
     setText(val);
 
-    // Check for `/` quick reply trigger in agent view
     if (isAgentView && val.startsWith('/')) {
       setShowQuickReplies(true);
     } else {
       setShowQuickReplies(false);
     }
 
-    // Emit typing status
     if (val.trim() === '') {
       stopTyping();
     } else {
@@ -267,7 +264,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   if (isRecordingVoice) {
     return (
-      <div className="p-3 bg-[#f0f2f5] dark:bg-[#202c33] border-t border-gray-200 dark:border-gray-700/60">
+      <div className="p-3 bg-[#f0f2f5] dark:bg-[#202c33] border-t border-black/[0.06] dark:border-white/[0.08]">
         <VoiceRecorder
           onRecorded={handleVoiceRecorded}
           onCancel={() => setIsRecordingVoice(false)}
@@ -277,7 +274,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   }
 
   return (
-    <div className="relative bg-[#f0f2f5] dark:bg-[#202c33] px-3 py-2 border-t border-gray-200/80 dark:border-gray-700/60 flex flex-col gap-2 select-none w-full">
+    <div className="relative bg-[#f0f2f5]/90 dark:bg-[#202c33]/90 backdrop-blur-2xl px-3 py-2.5 border-t border-black/[0.06] dark:border-white/[0.08] flex flex-col gap-2 select-none w-full transition-colors">
       {/* Hidden File Inputs */}
       <input
         type="file"
@@ -297,22 +294,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
       {/* Quoted Reply Banner */}
       {replyToMessage && (
-        <div className="flex items-center justify-between bg-black/5 dark:bg-black/30 border-l-4 border-[#00a884] p-2 rounded-r-lg text-xs">
+        <div className="flex items-center justify-between bg-black/[0.04] dark:bg-white/[0.06] border-l-3 border-[#00a884] px-3 py-2 rounded-r-xl text-xs backdrop-blur-md">
           <div>
             <span className="font-semibold text-[#00a884]">Replying to {replyToMessage.senderName}</span>
-            <p className="truncate text-gray-600 dark:text-gray-300 text-[11px]">{replyToMessage.content || replyToMessage.fileName}</p>
+            <p className="truncate text-[#667781] dark:text-[#8696a0] text-[11px] mt-0.5">{replyToMessage.content || replyToMessage.fileName}</p>
           </div>
-          <button onClick={() => setReplyToMessage(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-            <X className="w-4 h-4" />
+          <button onClick={() => setReplyToMessage(null)} className="p-1 rounded-full text-[#8696a0] hover:text-[#111b21] dark:hover:text-white">
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
       {/* Canned Quick Replies Menu */}
       {showQuickReplies && quickReplies.length > 0 && (
-        <div className="absolute bottom-16 left-4 right-4 z-40 bg-white dark:bg-[#202c33] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-2 max-h-48 overflow-y-auto">
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-2 py-1 border-b border-gray-100 dark:border-gray-700 mb-1">
-            <Zap className="w-3.5 h-3.5 text-amber-400" /> Canned Quick Replies
+        <div className="absolute bottom-16 left-4 right-4 z-40 bg-white/95 dark:bg-[#233138]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] p-2 max-h-48 overflow-y-auto">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#8696a0] uppercase tracking-wider px-2.5 py-1.5 border-b border-black/[0.04] dark:border-white/[0.06] mb-1">
+            <Zap className="w-3.5 h-3.5 text-amber-500" /> Canned Shortcuts
           </div>
           {quickReplies.map((qr) => (
             <button
@@ -321,47 +318,51 @@ export const MessageInput: React.FC<MessageInputProps> = ({
                 setText(qr.content);
                 setShowQuickReplies(false);
               }}
-              className="w-full text-left p-2 rounded-lg hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors flex justify-between items-center"
+              className="w-full text-left p-2.5 rounded-xl hover:bg-[#00a884]/10 dark:hover:bg-white/10 transition-colors flex justify-between items-center"
             >
               <div>
                 <span className="font-semibold text-xs text-[#00a884]">/{qr.shortcut}</span>
-                <p className="text-xs text-gray-600 dark:text-gray-300 truncate">{qr.content}</p>
+                <p className="text-xs text-[#111b21] dark:text-[#e9edef] truncate mt-0.5">{qr.content}</p>
               </div>
-              <span className="text-[10px] text-gray-400">{qr.title}</span>
+              <span className="text-[10px] text-[#8696a0] bg-black/[0.04] dark:bg-white/[0.06] px-2 py-0.5 rounded-md font-medium">{qr.title}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Attachment Options Menu */}
+      {/* iOS Action Sheet Attachment Menu */}
       {showAttachMenu && (
-        <div className="absolute bottom-16 left-12 z-40 bg-white dark:bg-[#233138] p-3 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-2 min-w-[190px] animate-in fade-in slide-in-from-bottom-2 duration-150">
+        <div className="absolute bottom-16 left-3 z-40 bg-white/95 dark:bg-[#233138]/95 backdrop-blur-2xl p-2 rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] flex flex-col gap-1 min-w-[210px] animate-in fade-in slide-in-from-bottom-2 duration-150">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="p-2 rounded-full bg-purple-500 text-white"><Image className="w-4 h-4" /></div> Photos & Videos
+            <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-sm"><Image className="w-4 h-4" /></div>
+            <span>Photos & Videos</span>
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="p-2 rounded-full bg-blue-500 text-white"><FileText className="w-4 h-4" /></div> PDF Document
+            <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-sm"><FileText className="w-4 h-4" /></div>
+            <span>Document / PDF</span>
           </button>
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="p-2 rounded-full bg-rose-500 text-white"><Camera className="w-4 h-4" /></div> Camera Photo
+            <div className="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm"><Camera className="w-4 h-4" /></div>
+            <span>Take Photo</span>
           </button>
           <button
             onClick={() => {
               setShowAttachMenu(false);
               setIsRecordingVoice(true);
             }}
-            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-white/10 transition-colors text-xs font-medium text-gray-700 dark:text-gray-200"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-colors text-xs font-semibold text-[#111b21] dark:text-[#e9edef]"
           >
-            <div className="p-2 rounded-full bg-amber-500 text-white"><Music className="w-4 h-4" /></div> Voice Note
+            <div className="w-8 h-8 rounded-full bg-[#00a884] text-white flex items-center justify-center shadow-sm"><Music className="w-4 h-4" /></div>
+            <span>Audio Message</span>
           </button>
         </div>
       )}
@@ -374,70 +375,60 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         />
       )}
 
-      {/* Main WhatsApp Input Row */}
+      {/* iOS Floating Capsule Input Row */}
       <div className="flex items-center gap-2 w-full">
-        {/* Emoji Button (Left side of input pill) */}
+        {/* Plus / Attach Button (Apple iOS Action Sheet Trigger) */}
         <button
           type="button"
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
-          title="Emoji"
+          onClick={() => setShowAttachMenu(!showAttachMenu)}
+          className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
+          title="Attachments"
         >
-          <Smile className="w-6 h-6" />
+          <Plus className="w-4 h-4" />
         </button>
 
         {/* Input Capsule Box */}
-        <div className="flex-1 flex items-center bg-white dark:bg-[#2a3942] rounded-full px-4 py-2 border border-transparent focus-within:ring-1 focus-within:ring-[#00a884]/30 shadow-xs min-w-0 transition-all">
+        <div className="flex-1 flex items-center bg-white dark:bg-[#2a3942] rounded-full px-3.5 py-1.5 border border-black/[0.08] dark:border-white/[0.08] focus-within:border-[#00a884] focus-within:ring-2 focus-within:ring-[#00a884]/20 shadow-xs min-w-0 transition-all">
           <input
             type="text"
             value={text}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={placeholder || "Type your message..."}
-            className="w-full bg-transparent text-gray-900 dark:text-[#e9edef] placeholder-gray-500 dark:placeholder-[#8696a0] text-sm md:text-base outline-none border-none pr-2 font-medium"
+            placeholder={placeholder || "Type a message..."}
+            className="w-full bg-transparent text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] text-[13px] sm:text-[14px] outline-none border-none pr-1.5 font-normal"
           />
 
-          {/* Paperclip attachment icon INSIDE right side of input capsule */}
+          {/* Emoji Button inside capsule */}
           <button
             type="button"
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
-            className="p-1 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
-            title="Attach file"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-1 text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
+            title="Emoji"
           >
-            <Paperclip className="w-5 h-5 -rotate-45" />
+            <Smile className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Camera Icon (Right outside capsule) */}
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[#54656f] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-[#e9edef] transition-colors focus:outline-none flex-shrink-0"
-          title="Camera"
-        >
-          <Camera className="w-6 h-6" />
-        </button>
-
-        {/* Green Circle Voice/Send Button */}
+        {/* Green Send Arrow / Mic Button */}
         {text.trim() ? (
           <button
             type="button"
             onClick={handleSendText}
             disabled={isUploading}
-            className="w-10 h-10 rounded-full bg-[#00a884] text-white hover:bg-[#008f70] transition-transform active:scale-95 shadow-md flex items-center justify-center flex-shrink-0"
-            title="Send message"
+            className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white transition-all active:scale-90 shadow-md flex items-center justify-center flex-shrink-0"
+            title="Send"
           >
-            <Send className="w-5 h-5 ml-0.5" />
+            <ArrowUp className="w-4 h-4 stroke-[2.5]" />
           </button>
         ) : (
           <button
             type="button"
             onClick={() => setIsRecordingVoice(true)}
-            className="w-10 h-10 rounded-full bg-[#00a884] text-white hover:bg-[#008f70] transition-transform active:scale-95 shadow-md flex items-center justify-center flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.09] dark:bg-white/[0.08] dark:hover:bg-white/[0.14] text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white flex items-center justify-center transition-all duration-200 active:scale-90 flex-shrink-0"
             title="Voice Note"
           >
-            <Mic className="w-5 h-5" />
+            <Mic className="w-4 h-4" />
           </button>
         )}
       </div>
