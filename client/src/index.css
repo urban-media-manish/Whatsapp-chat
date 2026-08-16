@@ -142,6 +142,43 @@
   100% { transform: scale(1); opacity: 0.9; }
 }
 
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUpSheet {
+  from { transform: translateY(100%); opacity: 0.5; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes blinkRec {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-pop {
+  animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-sheet {
+  animation: slideUpSheet 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-drawer {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-rec-dot {
+  animation: blinkRec 1.2s infinite ease-in-out;
+}
+
 .animate-recording {
   animation: applePulse 1.6s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }
+
