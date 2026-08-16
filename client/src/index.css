@@ -51,6 +51,21 @@
     --card-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.06);
   }
 
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overscroll-behavior: none;
+    overflow: hidden;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
@@ -58,7 +73,7 @@
     letter-spacing: -0.012em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    overflow: hidden;
   }
 }
 
