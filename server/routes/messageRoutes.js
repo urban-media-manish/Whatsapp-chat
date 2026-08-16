@@ -14,7 +14,25 @@ router.get('/:conversationId', async (req, res) => {
       .populate('replyTo')
       .sort({ createdAt: 1 });
 
-    res.json(messages);
+    // Clean up any duplicate consecutive welcome messages
+    const cleanMessages = [];
+    const seenWelcome = new Set();
+    for (const msg of messages) {
+      if (msg.senderId === 'agent_auto_welcome' || (msg.content && msg.content.includes('DlAM0ND'))) {
+        const key = (msg.content || '').trim();
+        if (!seenWelcome.has(key)) {
+          seenWelcome.add(key);
+          cleanMessages.push(msg);
+        } else {
+          // Remove duplicate from database
+          Message.findByIdAndDelete(msg._id).catch(() => {});
+        }
+      } else {
+        cleanMessages.push(msg);
+      }
+    }
+
+    res.json(cleanMessages);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

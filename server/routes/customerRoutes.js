@@ -62,8 +62,13 @@ router.post('/init', async (req, res) => {
       });
     } else {
       // Update customer details if provided
-      if (name && name !== customer.name) customer.name = name;
-      if (phone && phone !== customer.phone) customer.phone = phone;
+      if (name && name.trim() !== '') {
+        customer.name = name.trim();
+        if (!name.startsWith('Guest_')) {
+          customer.isGuest = false;
+        }
+      }
+      if (phone && phone.trim() !== '') customer.phone = phone.trim();
       customer.lastSeen = new Date();
       await customer.save();
     }
@@ -72,39 +77,52 @@ router.post('/init', async (req, res) => {
     let conversation = await Conversation.findOne({ customer: customer._id })
       .populate('assignedAgent', 'name avatar role email phone status');
 
+    let welcomeMessage = `💎 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 DlAM0ND 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 💎
+𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐌𝐄𝐓𝐀 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 ✅ 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐑𝐀𝐍𝐃
+━━━━━━━━━━━━━━━
+Available site
+
+https://allpanelexch9.game
+━━━━━━━━━━━━━━━
+𝐌𝐢𝐧𝐢𝐦𝐮𝐦 🆔 @ 𝟐𝟎𝟎
+𝐌𝐢𝐧𝐢𝐦𝐮𝐦 𝐁€T@ 𝟏𝟎𝟎
+𝐂𝐫𝐞𝐚𝐭𝐞 𝐘𝐨𝐮𝐫 🆔𝐓𝐡𝐫𝐨𝐮𝐠𝐡 𝐔𝐬 & 𝐆𝐞𝐭 𝟓% 𝐁0𝐍𝐔𝐒
+⚡ 𝐅𝐚𝐬𝐭 𝐃𝐞-𝐩𝐨𝐬𝐢𝐭 & 𝐖𝐢𝐭𝐡-𝐝𝐫𝐚𝐰𝐚𝐥
+🔒 𝐒𝐞𝐜𝐮𝐫𝐞 & 𝐓𝐫𝐮𝐬𝐭-𝐞𝐝 𝐏𝐥𝐚𝐭𝐟𝐨𝐫𝐦
+𝟐𝟒𝐱𝟕 𝐂𝐮𝐬𝐭𝐨𝐦𝐞𝐫 𝐒𝐮𝐩𝐩𝐨𝐫𝐭
+━━━━━━━━━━━━━━━
+𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐅𝐑𝐄𝐄 𝐏𝐑𝐄𝐃𝐈𝐂𝐓 & 𝐖𝐈𝐍 𝐒𝐈𝐓𝐄
+
+Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
+
     if (!conversation) {
       conversation = await Conversation.create({
         customer: customer._id,
         status: 'open',
         priority: 'medium',
         lastMessage: {
-          content: 'Hello! How can we help you today?',
-          senderType: 'system',
+          content: welcomeMessage,
+          senderType: 'agent',
           timestamp: new Date()
         }
       });
 
-      // Get customized welcome message from settings or fallback to default
-      let welcomeMessage = `👋 Welcome to our Live Support, {name}! An agent will be with you shortly. Feel free to describe your issue or ask any questions.`;
-      try {
-        const welcomeMessageSetting = await Setting.findOne({ key: 'welcomeMessage' });
-        if (welcomeMessageSetting && welcomeMessageSetting.value) {
-          welcomeMessage = welcomeMessageSetting.value;
-        }
-      } catch (err) {
-        console.error('Failed to load welcome message setting:', err);
-      }
-
-      // Replace {name} placeholder dynamically
-      const parsedWelcomeMessage = welcomeMessage.replace(/\{name\}/g, customer.name);
-
       // Send initial welcome message
       await Message.create({
         conversation: conversation._id,
-        senderType: 'system',
-        senderId: 'system',
-        senderName: 'Support System',
-        content: parsedWelcomeMessage
+        senderType: 'agent',
+        senderId: 'agent_auto_welcome',
+        senderName: 'Support Official',
+        content: welcomeMessage
+      });
+
+      // Send follow up prompt asking for name and WhatsApp number
+      await Message.create({
+        conversation: conversation._id,
+        senderType: 'agent',
+        senderId: 'agent_auto_prompt',
+        senderName: 'Support Official',
+        content: '👋 Sir/Ma\'am, apni ID create karne aur 5% Deposit Bonus activate karne ke liye kripya apna Naam aur WhatsApp Number share karein. 👇'
       });
 
       conversation = await Conversation.findById(conversation._id)
@@ -112,6 +130,25 @@ router.post('/init', async (req, res) => {
 
       if (req.io) {
         req.io.to('agent_workspace_room').emit('new_conversation', conversation);
+      }
+    } else {
+      // If conversation exists, check if it has any welcome message
+      const msgCount = await Message.countDocuments({ conversation: conversation._id });
+      if (msgCount === 0) {
+        await Message.create({
+          conversation: conversation._id,
+          senderType: 'agent',
+          senderId: 'agent_auto_welcome',
+          senderName: 'Support Official',
+          content: welcomeMessage
+        });
+        await Message.create({
+          conversation: conversation._id,
+          senderType: 'agent',
+          senderId: 'agent_auto_prompt',
+          senderName: 'Support Official',
+          content: '👋 Sir/Ma\'am, apni ID create karne aur 5% Deposit Bonus activate karne ke liye kripya apna Naam aur WhatsApp Number share karein. 👇'
+        });
       }
     }
 
