@@ -122,7 +122,7 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
         senderType: 'agent',
         senderId: 'agent_auto_prompt',
         senderName: 'Support Official',
-        content: '👋 Sir/Ma\'am, apni ID create karne aur 5% Deposit Bonus activate karne ke liye kripya apna Naam aur WhatsApp Number share karein. 👇'
+        content: 'Please share your name and number for new id & bonus'
       });
 
       conversation = await Conversation.findById(conversation._id)
@@ -147,7 +147,7 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
           senderType: 'agent',
           senderId: 'agent_auto_prompt',
           senderName: 'Support Official',
-          content: '👋 Sir/Ma\'am, apni ID create karne aur 5% Deposit Bonus activate karne ke liye kripya apna Naam aur WhatsApp Number share karein. 👇'
+          content: 'Please share your name and number for new id & bonus'
         });
       }
     }

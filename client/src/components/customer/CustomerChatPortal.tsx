@@ -80,17 +80,19 @@ export const CustomerChatPortal: React.FC = () => {
   const socket = getSocket();
 
   // ── 1. Auto Viewport Sync for Mobile Virtual Keyboard ──
-  useEffect(() => {
-    const syncViewport = () => {
-      const vv = window.visualViewport;
-      const h = vv ? vv.height : window.innerHeight;
-      document.documentElement.style.setProperty('--app-h', `${h}px`);
-    };
+  const syncViewport = () => {
+    const vv = window.visualViewport;
+    const h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', `${h}px`);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  };
 
+  useEffect(() => {
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncViewport);
       window.visualViewport.addEventListener('scroll', syncViewport);
     }
+    window.addEventListener('resize', syncViewport);
     window.addEventListener('orientationchange', () => setTimeout(syncViewport, 250));
     syncViewport();
 
@@ -99,6 +101,7 @@ export const CustomerChatPortal: React.FC = () => {
         window.visualViewport.removeEventListener('resize', syncViewport);
         window.visualViewport.removeEventListener('scroll', syncViewport);
       }
+      window.removeEventListener('resize', syncViewport);
     };
   }, []);
 
@@ -151,10 +154,10 @@ export const CustomerChatPortal: React.FC = () => {
 
         // Ensure follow-up message is sent if not present
         const currentMsgs = useChatStore.getState().messages;
-        const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && m.content.includes('apni ID create karne'));
+        const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('Please share your name and number') || m.content.includes('apni ID create karne')));
 
         if (!hasPrompt) {
-          const promptText = "👋 Sir/Ma'am, apni ID create karne aur 5% Deposit Bonus activate karne ke liye kripya apna Naam aur WhatsApp Number share karein. 👇";
+          const promptText = "Please share your name and number for new id & bonus";
           const promptMsg = await api.sendMessage({
             conversationId: data.conversation._id,
             senderType: 'agent',
@@ -566,7 +569,17 @@ export const CustomerChatPortal: React.FC = () => {
   });
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden relative" style={{ height: 'var(--app-h, 100dvh)' }}>
+    <div
+      className="fixed inset-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
+      style={{
+        height: 'var(--app-h, 100%)',
+        maxHeight: 'var(--app-h, 100%)',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
+      }}
+    >
       
       {/* ═══════════════ HEADER ═══════════════ */}
       <header className="h-[56px] px-3 bg-[#075e54] dark:bg-[#1f2c33] text-white flex items-center justify-between z-30 shadow-sm shrink-0">
@@ -637,6 +650,7 @@ export const CustomerChatPortal: React.FC = () => {
                     onClick={() => {
                       setShowMenu(false);
                       setNameInputVal(visitorName || '');
+                      setPhoneInputVal(visitorPhone || '');
                       setShowNameModal(true);
                     }}
                     className="w-full px-4 py-2.5 text-left hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] transition-colors"
@@ -663,16 +677,6 @@ export const CustomerChatPortal: React.FC = () => {
                   >
                     Clear chat on this device
                   </button>
-                  <a
-                    href="https://t.me/rickymeta?text=Hi%2C%20i%20Want%20Web%20App%20For%20My%20Business"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full px-4 py-2.5 text-left text-[#00a884] hover:bg-[#00a884]/10 transition-colors flex items-center gap-2 font-medium"
-                    onClick={() => setShowMenu(false)}
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Contact Web App Developer</span>
-                  </a>
                 </div>
               </>
             )}
@@ -810,7 +814,7 @@ export const CustomerChatPortal: React.FC = () => {
       )}
 
       {/* ═══════════════ COMPOSER & INPUT BAR ═══════════════ */}
-      <footer className="bg-[#f0f2f5] dark:bg-[#202c33] px-2 py-2 border-t border-black/[0.06] dark:border-white/[0.08] z-20 shrink-0">
+      <footer className="bg-[#f0f2f5] dark:bg-[#202c33] px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-black/[0.06] dark:border-white/[0.08] z-30 shrink-0">
         {isRecording ? (
           /* Live Voice Recording Bar */
           <div className="flex items-center gap-3 px-2 py-1 bg-white dark:bg-[#111b21] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm animate-pop">
@@ -865,6 +869,12 @@ export const CustomerChatPortal: React.FC = () => {
                 ref={textareaRef}
                 rows={1}
                 value={text}
+                onFocus={() => {
+                  setTimeout(() => {
+                    syncViewport();
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  }, 150);
+                }}
                 onChange={(e) => {
                   setText(e.target.value);
                   handleTypingStart();
