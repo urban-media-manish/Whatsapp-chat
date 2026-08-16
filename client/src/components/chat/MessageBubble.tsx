@@ -134,17 +134,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
     );
   }
 
-  const senderInitial = message.senderName ? message.senderName.charAt(0).toUpperCase() : (isSentByMe ? 'U' : 'A');
-
   return (
     <div className={`flex w-full mb-2.5 ${isSentByMe ? 'justify-end' : 'justify-start'} group items-end`}>
-
-      {/* Received Avatar */}
-      {!isSentByMe && (
-        <div className="w-7 h-7 rounded-full bg-[#00a884] text-white font-semibold flex items-center justify-center text-[11px] flex-shrink-0 mr-2 mb-0.5 shadow-sm">
-          {senderInitial}
-        </div>
-      )}
 
       {/* Action Buttons for Sent (Left of Bubble) */}
       {isSentByMe && (
@@ -220,7 +211,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
         )}
 
         {/* Sender Name Label */}
-        {!isSentByMe && (
+        {!isSentByMe && isAgentView && (
           <p className="text-[11px] font-bold text-[#00a884] mb-0.5">
             {message.senderName || 'Support Agent'}
           </p>

@@ -12,7 +12,7 @@ import {
   X, Smile, Paperclip, Mic, Send,
   Bell, MoreVertical, Moon, Sun, Download, FileText,
   Image as ImageIcon, Camera, File, Music, ArrowDown,
-  Trash2, Phone, Search, ChevronLeft, Sparkles
+  Trash2, Phone, Search, ChevronLeft, Smartphone
 } from 'lucide-react';
 
 const BRAND_NAME = "Support Official";
@@ -21,7 +21,6 @@ const NAME_KEY = "support_visitor_name";
 const PHONE_KEY = "support_visitor_phone";
 const NOTICE_KEY = "support_push_notice_dismissed";
 const PUSH_PERM_KEY = "support_push_enabled";
-const SUBMITTED_KEY = "support_details_submitted";
 
 export const CustomerChatPortal: React.FC = () => {
   const {
@@ -45,11 +44,6 @@ export const CustomerChatPortal: React.FC = () => {
   // UI Panels / Modals
   const [showMenu, setShowMenu] = useState(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
-  const [showNameModal, setShowNameModal] = useState(() => {
-    return localStorage.getItem(SUBMITTED_KEY) !== 'true';
-  });
-  const [nameInputVal, setNameInputVal] = useState(localStorage.getItem(NAME_KEY) || '');
-  const [phoneInputVal, setPhoneInputVal] = useState(localStorage.getItem(PHONE_KEY) || '');
   const [pushNoticeVisible, setPushNoticeVisible] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(localStorage.getItem(PUSH_PERM_KEY) === 'true');
   const [showAttachSheet, setShowAttachSheet] = useState(false);
@@ -60,6 +54,9 @@ export const CustomerChatPortal: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // PWA install prompt ref
+  const deferredPromptRef = useRef<any>(null);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -83,8 +80,10 @@ export const CustomerChatPortal: React.FC = () => {
   const syncViewport = () => {
     const vv = window.visualViewport;
     const h = vv ? vv.height : window.innerHeight;
+    const top = vv ? vv.offsetTop : 0;
     document.documentElement.style.setProperty('--app-h', `${h}px`);
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    document.documentElement.style.setProperty('--app-top', `${top}px`);
+    window.scrollTo(0, 0);
   };
 
   useEffect(() => {
@@ -152,9 +151,27 @@ export const CustomerChatPortal: React.FC = () => {
           userId: data.customer._id
         });
 
-        // Ensure follow-up message is sent if not present
+        // 1. Ensure 1st Welcome message is present
         const currentMsgs = useChatStore.getState().messages;
-        const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('Please share your name and number') || m.content.includes('apni ID create karne')));
+        const hasWelcome = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('DlAM0ND') || m.content.includes('allpanelexch9.game')));
+
+        const welcomeText = `💎 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 DlAM0ND 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 💎\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐌𝐄𝐓𝐀 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 ✅ 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐑𝐀𝐍𝐃\n━━━━━━━━━━━━━━━\nAvailable site\n\nhttps://allpanelexch9.game\n━━━━━━━━━━━━━━━\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 🆔 @ 𝟐𝟎𝟎\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 𝐁€T@ 𝟏𝟎𝟎\n𝐂𝐫𝐞𝐚𝐭𝐞 𝐘𝐨𝐮𝐫 🆔𝐓𝐡𝐫𝐨𝐮𝐠𝐡 𝐔𝐬 & 𝐆𝐞𝐭 𝟓% 𝐁0𝐍𝐔𝐒\n⚡ 𝐅𝐚𝐬𝐭 𝐃𝐞-𝐩𝐨𝐬𝐢𝐭 & 𝐖𝐢𝐭𝐡-𝐝𝐫𝐚𝐰𝐚𝐥\n🔒 𝐒𝐞𝐜𝐮𝐫𝐞 & 𝐓𝐫𝐮𝐬𝐭-𝐞𝐝 𝐏𝐥𝐚𝐭𝐟𝐨𝐫𝐦\n𝟐𝟒𝐱𝟕 𝐂𝐮𝐬𝐭𝐨𝐦𝐞𝐫 𝐒𝐮𝐩𝐩𝐨𝐫𝐭\n━━━━━━━━━━━━━━━\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐅𝐑𝐄𝐄 𝐏𝐑𝐄𝐃𝐈𝐂𝐓 & 𝐖𝐈𝐍 𝐒𝐈𝐓𝐄\n\nNote :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
+
+        if (!hasWelcome) {
+          const welcomeMsg = await api.sendMessage({
+            conversationId: data.conversation._id,
+            senderType: 'agent',
+            senderId: 'agent_auto_welcome',
+            senderName: BRAND_NAME,
+            content: welcomeText,
+            type: 'text'
+          });
+          addMessage(welcomeMsg);
+        }
+
+        // 2. Ensure 2nd Follow-up prompt message is present
+        const afterWelcomeMsgs = useChatStore.getState().messages;
+        const hasPrompt = afterWelcomeMsgs && afterWelcomeMsgs.some((m) => m.content && (m.content.includes('Please share your name and number') || m.content.includes('apni ID create karne')));
 
         if (!hasPrompt) {
           const promptText = "Please share your name and number for new id & bonus";
@@ -180,16 +197,18 @@ export const CustomerChatPortal: React.FC = () => {
     if (!noticeDismissed && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
       setPushNoticeVisible(true);
     }
+  }, []);
 
-    // Trigger Name popup after 1.5s if visitor name not saved yet
-    if (!storedName) {
-      const timer = setTimeout(() => {
-        setNameInputVal('');
-        setPhoneInputVal('');
-        setShowNameModal(true);
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
+  // ── 3b. PWA Install Prompt Listener ──
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      deferredPromptRef.current = e;
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
 
   // ── 4. Socket Listeners ──
@@ -451,52 +470,16 @@ export const CustomerChatPortal: React.FC = () => {
     }
   };
 
-  // ── 9. Modals Handlers (Name, Push, Clear) ──
-  const handleSaveName = async () => {
-    const trimmedName = nameInputVal.trim();
-    const trimmedPhone = phoneInputVal.trim();
-    if (!trimmedName || !customerSession) return;
-    try {
-      const data = await api.initCustomer({
-        sessionId: customerSession.sessionId,
-        name: trimmedName,
-        phone: trimmedPhone || visitorPhone || undefined,
-        isGuest: false
+  // ── 9. Menu & Settings Handlers ──
+  const handleInstallPwa = () => {
+    setShowMenu(false);
+    if (deferredPromptRef.current) {
+      deferredPromptRef.current.prompt();
+      deferredPromptRef.current.userChoice.then(() => {
+        deferredPromptRef.current = null;
       });
-      setCustomerSession(data.customer, data.conversation);
-      setVisitorName(trimmedName);
-      localStorage.setItem(NAME_KEY, trimmedName);
-      localStorage.setItem('customer_name', trimmedName);
-      localStorage.setItem(SUBMITTED_KEY, 'true');
-      if (trimmedPhone) {
-        setVisitorPhone(trimmedPhone);
-        localStorage.setItem(PHONE_KEY, trimmedPhone);
-        localStorage.setItem('customer_phone', trimmedPhone);
-      }
-      setShowNameModal(false);
-      showToast('Details saved!');
-
-      // Automatically post details in chat
-      if (customerConversation) {
-        const introText = trimmedPhone
-          ? `Hello Support! My name is ${trimmedName} and WhatsApp number is ${trimmedPhone}. Please activate my ID with 5% bonus.`
-          : `Hello Support! My name is ${trimmedName}. Please activate my ID.`;
-
-        sounds.playSent();
-        const newMsg = await api.sendMessage({
-          conversationId: customerConversation._id,
-          senderType: 'customer',
-          senderId: customerSession._id,
-          senderName: trimmedName,
-          content: introText,
-          type: 'text'
-        });
-        addMessage(newMsg);
-        scrollToBottom();
-      }
-    } catch (err) {
-      console.error('Save name error:', err);
-      showToast('Failed to save details');
+    } else {
+      showToast("Tap browser menu (⋮ / Share) → 'Add to Home screen'");
     }
   };
 
@@ -540,15 +523,42 @@ export const CustomerChatPortal: React.FC = () => {
 
   const isAgentTyping = customerConversation && typingState[customerConversation._id]?.senderType === 'agent' && typingState[customerConversation._id]?.isTyping;
 
-  // Filtered messages for search + deduplication
+  // Filter out any system welcome greeting (e.g. "Welcome to our Live Support, Guest_...")
+  const validMessages = messages.filter((m) => {
+    if (m.senderType === 'system' || (m.content && m.content.includes('Welcome to our Live Support'))) {
+      return false;
+    }
+    return true;
+  });
+
+  // Sort messages: Guarantee Welcome Card is 1st and Prompt is 2nd
+  const sortedMessages = [...validMessages].sort((a, b) => {
+    const aIsWelcome = a.senderId === 'agent_auto_welcome' || (a.content && a.content.includes('DlAM0ND'));
+    const bIsWelcome = b.senderId === 'agent_auto_welcome' || (b.content && b.content.includes('DlAM0ND'));
+    const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && a.content.includes('Please share your name'));
+    const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && b.content.includes('Please share your name'));
+
+    if (aIsWelcome && bIsPrompt) return -1;
+    if (bIsWelcome && aIsPrompt) return 1;
+
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
   const deduplicatedMessages: Message[] = [];
   const seenWelcomeKeys = new Set<string>();
+  const seenPromptKeys = new Set<string>();
 
-  for (const m of messages) {
+  for (const m of sortedMessages) {
     if (m.senderId === 'agent_auto_welcome' || (m.content && m.content.includes('DlAM0ND'))) {
       const key = (m.content || '').trim();
       if (!seenWelcomeKeys.has(key)) {
         seenWelcomeKeys.add(key);
+        deduplicatedMessages.push(m);
+      }
+    } else if (m.senderId === 'agent_auto_prompt' || (m.content && m.content.includes('Please share your name'))) {
+      const key = (m.content || '').trim();
+      if (!seenPromptKeys.has(key)) {
+        seenPromptKeys.add(key);
         deduplicatedMessages.push(m);
       }
     } else {
@@ -570,26 +580,32 @@ export const CustomerChatPortal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
+      className="fixed left-0 right-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
       style={{
-        height: 'var(--app-h, 100%)',
-        maxHeight: 'var(--app-h, 100%)',
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0
+        top: 'var(--app-top, 0px)',
+        height: 'var(--app-h, 100dvh)',
+        maxHeight: 'var(--app-h, 100dvh)'
       }}
     >
       
       {/* ═══════════════ HEADER ═══════════════ */}
       <header className="h-[56px] px-3 bg-[#075e54] dark:bg-[#1f2c33] text-white flex items-center justify-between z-30 shadow-sm shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-[38px] h-[38px] rounded-full bg-white/20 flex items-center justify-center font-bold text-base text-white shrink-0 shadow-inner">
-            S
+          <div className="relative w-[40px] h-[40px] rounded-full overflow-hidden shrink-0 shadow-md border-2 border-white/30 bg-emerald-700 flex items-center justify-center">
+            <img
+              src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
+              alt="Support Official"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
+            <span className="absolute text-sm font-bold text-white uppercase select-none -z-10">S</span>
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-400 border-2 border-[#075e54] dark:border-[#1f2c33] rounded-full" />
           </div>
           <div className="min-w-0 flex flex-col justify-center">
-            <h1 className="text-[15px] font-semibold tracking-tight truncate leading-tight">
-              {BRAND_NAME}
+            <h1 className="text-[15px] font-semibold tracking-tight truncate leading-tight flex items-center gap-1.5">
+              <span>{BRAND_NAME}</span>
             </h1>
             <p className="text-[11px] text-emerald-200 dark:text-emerald-400 leading-tight">
               {isAgentTyping ? (
@@ -647,15 +663,11 @@ export const CustomerChatPortal: React.FC = () => {
                 <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
                 <div className="absolute right-0 top-12 w-60 bg-white dark:bg-[#202c33] rounded-xl shadow-2xl py-1.5 z-50 text-[#111b21] dark:text-[#e9edef] border border-black/[0.06] dark:border-white/[0.08] animate-pop text-sm font-normal">
                   <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      setNameInputVal(visitorName || '');
-                      setPhoneInputVal(visitorPhone || '');
-                      setShowNameModal(true);
-                    }}
-                    className="w-full px-4 py-2.5 text-left hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] transition-colors"
+                    onClick={handleInstallPwa}
+                    className="w-full px-4 py-2.5 text-left hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] transition-colors flex items-center justify-between"
                   >
-                    Change your name
+                    <span>Add to Home screen</span>
+                    <Smartphone className="w-4 h-4 text-[#00a884]" />
                   </button>
                   <button
                     onClick={() => { setShowMenu(false); setShowNotifPanel(true); }}
@@ -754,7 +766,7 @@ export const CustomerChatPortal: React.FC = () => {
       <main
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-3 md:px-6 space-y-2 chat-wallpaper relative"
+        className="flex-1 min-h-0 overflow-y-auto p-3 md:px-6 space-y-2 chat-wallpaper relative"
       >
         {/* Empty State */}
         {messages.length === 0 && (
@@ -872,8 +884,8 @@ export const CustomerChatPortal: React.FC = () => {
                 onFocus={() => {
                   setTimeout(() => {
                     syncViewport();
-                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-                  }, 150);
+                    scrollToBottom();
+                  }, 50);
                 }}
                 onChange={(e) => {
                   setText(e.target.value);
@@ -1049,65 +1061,6 @@ export const CustomerChatPortal: React.FC = () => {
               <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1">
                 Replies from support will show up here.
               </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════ NAME & WHATSAPP NUMBER MODAL ═══════════════ */}
-      {showNameModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#202c33] p-6 rounded-3xl max-w-sm w-full relative shadow-2xl border border-black/[0.06] dark:border-white/[0.08] animate-pop">
-            <div className="w-12 h-12 rounded-2xl bg-[#00a884]/15 text-[#00a884] dark:text-emerald-400 flex items-center justify-center mb-3">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <h2 className="text-lg font-bold text-[#111b21] dark:text-[#e9edef] mb-1">
-              Activate ID & 5% Bonus
-            </h2>
-            <p className="text-xs text-[#667781] dark:text-[#8696a0] mb-4 leading-relaxed">
-              Kripya apna Naam aur WhatsApp Number enter karein taaki hum aapki ID turant generate kar sakein.
-            </p>
-            
-            <div className="space-y-3 mb-5">
-              <div>
-                <label className="block text-[11px] font-semibold text-[#8696a0] mb-1">Aapka Naam / Name *</label>
-                <input
-                  type="text"
-                  value={nameInputVal}
-                  onChange={(e) => setNameInputVal(e.target.value)}
-                  placeholder="e.g. Rahul Sharma"
-                  maxLength={40}
-                  className="w-full bg-[#f0f2f5] dark:bg-[#111b21] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-[#111b21] dark:text-[#e9edef] outline-none focus:border-[#00a884]"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-[#8696a0] mb-1">WhatsApp Mobile Number *</label>
-                <input
-                  type="tel"
-                  value={phoneInputVal}
-                  onChange={(e) => setPhoneInputVal(e.target.value)}
-                  placeholder="e.g. +91 9876543210"
-                  maxLength={20}
-                  className="w-full bg-[#f0f2f5] dark:bg-[#111b21] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-[#111b21] dark:text-[#e9edef] outline-none focus:border-[#00a884]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowNameModal(false)}
-                className="px-4 py-2.5 text-xs font-semibold text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white transition-colors"
-              >
-                Skip
-              </button>
-              <button
-                onClick={handleSaveName}
-                disabled={!nameInputVal.trim()}
-                className="px-5 py-2.5 text-xs font-semibold bg-[#00a884] hover:bg-[#008f70] disabled:opacity-50 text-white rounded-xl shadow-md active:scale-95 transition-all"
-              >
-                Submit & Connect
-              </button>
             </div>
           </div>
         </div>
