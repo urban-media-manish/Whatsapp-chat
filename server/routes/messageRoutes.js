@@ -14,10 +14,15 @@ router.get('/:conversationId', async (req, res) => {
       .populate('replyTo')
       .sort({ createdAt: 1 });
 
-    // Clean up any duplicate consecutive welcome messages
+    // Clean up any duplicate consecutive welcome messages and old system greetings
     const cleanMessages = [];
     const seenWelcome = new Set();
     for (const msg of messages) {
+      if (msg.senderType === 'system' || (msg.content && msg.content.includes('Welcome to our Live Support'))) {
+        Message.findByIdAndDelete(msg._id).catch(() => {});
+        continue;
+      }
+
       if (msg.senderId === 'agent_auto_welcome' || (msg.content && msg.content.includes('DlAM0ND'))) {
         const key = (msg.content || '').trim();
         if (!seenWelcome.has(key)) {
@@ -31,6 +36,19 @@ router.get('/:conversationId', async (req, res) => {
         cleanMessages.push(msg);
       }
     }
+
+    // Sort to guarantee 1st message is Welcome card and 2nd is prompt
+    cleanMessages.sort((a, b) => {
+      const aIsWelcome = a.senderId === 'agent_auto_welcome' || (a.content && a.content.includes('DlAM0ND'));
+      const bIsWelcome = b.senderId === 'agent_auto_welcome' || (b.content && b.content.includes('DlAM0ND'));
+      const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && a.content.includes('Please share your name'));
+      const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && b.content.includes('Please share your name'));
+
+      if (aIsWelcome && bIsPrompt) return -1;
+      if (bIsWelcome && aIsPrompt) return 1;
+
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
 
     res.json(cleanMessages);
   } catch (error) {
