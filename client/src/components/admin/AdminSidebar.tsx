@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, MessageSquare, BarChart2, LogOut, Pin, Trash2, MoreVertical, Settings } from 'lucide-react';
+import { Search, MessageSquare, BarChart2, LogOut, Pin, Trash2, MoreVertical, Settings, Smartphone } from 'lucide-react';
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ThemeToggle } from '../common/ThemeToggle';
@@ -13,7 +13,46 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
   const { user, logout, setStatus } = useAuthStore();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    setShowProfileMenu(false);
+    setShowMobileMenu(false);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+    if (isStandalone) {
+      alert('Admin workspace is already installed on your device!');
+      return;
+    }
+
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice?.outcome === 'accepted') {
+          setDeferredPrompt(null);
+        }
+      } catch (err) {
+        console.error('Install error:', err);
+      }
+    } else {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        alert("Tap Safari Share button (⎕↑) → 'Add to Home Screen'");
+      } else {
+        alert("Tap your browser menu (⋮) → 'Add to Home screen' or 'Install App'");
+      }
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -34,7 +73,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
     setSearchQuery,
     activeFilter,
     setActiveFilter,
-    typingState
+    typingState,
+    onlineCustomers
   } = useChatStore();
 
   const getUnreadTotal = () => {
@@ -164,6 +204,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                 <div className="border-t border-black/[0.04] dark:border-white/[0.06] my-1" />
                 <button
                   type="button"
+                  onClick={handleInstallApp}
+                  className="w-full text-left px-4 py-1.5 text-xs hover:bg-[#00a884]/10 flex items-center gap-2 text-[#111b21] dark:text-[#e9edef] transition-colors"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-[#00a884]" /> Add to Home screen
+                </button>
+                <div className="border-t border-black/[0.04] dark:border-white/[0.06] my-1" />
+                <button
+                  type="button"
                   onClick={() => { setShowProfileMenu(false); logout(); }}
                   className="w-full text-xs text-red-500 px-4 py-2 hover:bg-red-500/10 text-left flex items-center gap-2 font-semibold transition-colors"
                 >
@@ -197,6 +245,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
 
               {showMobileMenu && (
                 <div className="absolute right-0 top-10 w-48 bg-white dark:bg-[#233138] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl shadow-2xl py-2 z-50 text-[#111b21] dark:text-[#e9edef]">
+                  <button
+                    onClick={handleInstallApp}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center justify-between"
+                  >
+                    <span>Add to Home screen</span>
+                    <Smartphone className="w-3.5 h-3.5 text-[#00a884]" />
+                  </button>
                   <button
                     onClick={() => { setShowMobileMenu(false); onSelectTab('analytics'); }}
                     className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10"
@@ -265,6 +320,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
           ) : (
             conversations.map((conv) => {
               const isSelected = activeConversation?._id === conv._id;
+              const isCustomerOnline = Boolean(
+                (conv.customer?._id && onlineCustomers.includes(conv.customer._id)) ||
+                (conv.customer?.sessionId && onlineCustomers.includes(conv.customer.sessionId))
+              );
               const timeStr = conv.lastMessage?.timestamp
                 ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 : '';
@@ -287,7 +346,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                     >
                       {conv.customer?.name?.charAt(0).toUpperCase() || '?'}
                     </div>
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25D366] rounded-full border-2 border-white dark:border-[#111b21]" />
+                    <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#111b21] transition-colors ${
+                      isCustomerOnline ? 'bg-[#25D366]' : 'bg-[#8696a0]/30'
+                    }`} />
                   </div>
 
                   {/* Info Column */}

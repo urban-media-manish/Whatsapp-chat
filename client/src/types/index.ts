@@ -79,7 +79,7 @@ export interface Message {
   fileSize?: number;
   mimeType?: string;
   status: 'sent' | 'delivered' | 'read';
-  reactions: Reaction[];
+  reactions?: Reaction[];
   replyTo?: Message | string;
   replyToSnippet?: {
     content: string;

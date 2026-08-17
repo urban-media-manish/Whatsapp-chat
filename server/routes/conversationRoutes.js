@@ -48,6 +48,13 @@ router.get('/', protect, async (req, res) => {
       .populate('assignedAgent', 'name avatar role email phone status')
       .sort({ isPinned: -1, updatedAt: -1 });
 
+    // Filter out dummy/passive guests that haven't submitted details
+    conversations = conversations.filter(conv => {
+      if (!conv.customer) return false;
+      const isDummyGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
+      return !isDummyGuest;
+    });
+
     if (search && search.trim() !== '') {
       const s = search.toLowerCase();
       conversations = conversations.filter(conv => {

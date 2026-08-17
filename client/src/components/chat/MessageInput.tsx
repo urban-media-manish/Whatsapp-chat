@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import { getSocket } from '../../services/socket';
 import { useChatStore } from '../../store/useChatStore';
 import { sounds } from '../../utils/audio';
+import type { Message } from '../../types';
 
 interface MessageInputProps {
   conversationId: string;
@@ -110,6 +111,34 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setShowQuickReplies(false);
     stopTyping();
 
+    // 1. Instant Optimistic Render (0ms)
+    const tempId = 'temp_' + Date.now() + Math.random().toString(36).substring(2, 6);
+    const optimisticMsg: Message = {
+      _id: tempId,
+      conversation: conversationId,
+      senderType,
+      senderId,
+      senderName,
+      content: contentToSend,
+      type: 'text',
+      status: 'sent',
+      createdAt: new Date().toISOString(),
+      replyTo: replyToMessage ? {
+        _id: replyToMessage._id,
+        content: replyToMessage.content || replyToMessage.fileName || 'Attachment',
+        senderName: replyToMessage.senderName,
+        type: replyToMessage.type
+      } as any : undefined
+    };
+
+    addMessage(optimisticMsg);
+    sounds.playSent();
+    setReplyToMessage(null);
+
+    // 2. Real-time WebSocket emission (instant ~10ms)
+    socket.emit('send_message', optimisticMsg);
+
+    // 3. Background DB Save
     try {
       const msg = await api.sendMessage({
         conversationId,
@@ -121,9 +150,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       });
 
       addMessage(msg);
-      socket.emit('send_message', msg);
-      sounds.playSent();
-      setReplyToMessage(null);
     } catch (err) {
       console.error('Failed to send message:', err);
     }
