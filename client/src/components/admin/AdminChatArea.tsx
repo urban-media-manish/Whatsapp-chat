@@ -17,7 +17,7 @@ interface AdminChatAreaProps {
 }
 
 export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPanel, showContextPanel }) => {
-  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, setActiveConversation } = useChatStore();
+  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, onlineCustomers, setActiveConversation } = useChatStore();
   const { user } = useAuthStore();
   const [agents, setAgents] = useState<User[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -203,10 +203,10 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
           <button
             onClick={onToggleContextPanel}
-            title="Click to view customer details"
-            className={`relative group/dp focus:outline-none rounded-full transition-all ${
+            className={`relative cursor-pointer group/dp focus:outline-none flex-shrink-0 rounded-full transition-all ${
               showContextPanel ? 'ring-2 ring-[#00a884] ring-offset-2 ring-offset-white dark:ring-offset-[#202c33]' : ''
             }`}
+            title="Click to view full CRM customer dossier"
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-xs group-hover/dp:scale-105 transition-transform"
@@ -214,7 +214,12 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
             >
               {customerName.charAt(0).toUpperCase()}
             </div>
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#25D366] rounded-full border-2 border-white dark:border-[#202c33]" />
+            <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-[#202c33] transition-colors ${
+              (activeConversation.customer?._id && onlineCustomers.includes(activeConversation.customer._id)) ||
+              (activeConversation.customer?.sessionId && onlineCustomers.includes(activeConversation.customer.sessionId))
+                ? 'bg-[#25D366]'
+                : 'bg-[#8696a0]/40'
+            }`} />
           </button>
 
           <div>
@@ -222,11 +227,14 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
               <h2 className="text-sm font-semibold tracking-tight text-[#111b21] dark:text-[#e9edef]">{customerName}</h2>
               <span className="text-[11px] text-[#8696a0] font-mono">{activeConversation.customer?.phone}</span>
             </div>
-            <p className="text-[11px] font-medium text-[#00a884]">
+            <p className="text-[11px] font-medium leading-tight">
               {isCustomerTyping ? (
-                <span className="font-semibold animate-pulse">Customer is typing...</span>
+                <span className="font-semibold animate-pulse text-[#00a884]">Customer is typing...</span>
+              ) : (activeConversation.customer?._id && onlineCustomers.includes(activeConversation.customer._id)) ||
+                  (activeConversation.customer?.sessionId && onlineCustomers.includes(activeConversation.customer.sessionId)) ? (
+                <span className="text-[#00a884]">Online • Active WhatsApp Session</span>
               ) : (
-                'Online • Active WhatsApp Session'
+                <span className="text-[#8696a0]">Offline</span>
               )}
             </p>
           </div>

@@ -161,6 +161,11 @@ router.post('/', async (req, res) => {
 
     const populatedMsg = await Message.findById(message._id).populate('replyTo');
 
+    if (req.io) {
+      req.io.to(`conv_${conversationId}`).emit('receive_message', populatedMsg);
+      req.io.to('agent_workspace_room').emit('conversation_activity', populatedMsg);
+    }
+
     res.status(201).json(populatedMsg);
   } catch (error) {
     console.error('Error creating message:', error);

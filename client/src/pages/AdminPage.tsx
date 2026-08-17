@@ -85,6 +85,21 @@ export const AdminPage: React.FC = () => {
       store.setTyping(conversationId, senderName, isTyping, senderType);
     });
 
+    socket.on('online_customers_list', ({ onlineCustomers }: { onlineCustomers: string[] }) => {
+      useChatStore.getState().setOnlineCustomers(onlineCustomers || []);
+    });
+
+    socket.on('customer_presence', ({ customerId, status, onlineCustomers }: { customerId: string; status: string; onlineCustomers?: string[] }) => {
+      const store = useChatStore.getState();
+      if (onlineCustomers) {
+        store.setOnlineCustomers(onlineCustomers);
+      } else if (status === 'online') {
+        store.addOnlineCustomer(customerId);
+      } else {
+        store.removeOnlineCustomer(customerId);
+      }
+    });
+
     return () => {
       socket.off('receive_message');
       socket.off('new_conversation');
@@ -92,6 +107,8 @@ export const AdminPage: React.FC = () => {
       socket.off('conversation_deleted');
       socket.off('message_deleted');
       socket.off('user_typing');
+      socket.off('online_customers_list');
+      socket.off('customer_presence');
     };
   }, [socket]);
 

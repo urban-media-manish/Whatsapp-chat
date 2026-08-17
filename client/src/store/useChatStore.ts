@@ -29,6 +29,7 @@ interface ChatState {
 
   replyToMessage: Message | null;
   typingState: Record<string, TypingState>;
+  onlineCustomers: string[];
 
   isLoadingConversations: boolean;
   isLoadingMessages: boolean;
@@ -41,6 +42,9 @@ interface ChatState {
   markAllMessagesRead: (conversationId: string) => void;
   setReplyToMessage: (msg: Message | null) => void;
   setTyping: (conversationId: string, name: string, isTyping: boolean, senderType?: string) => void;
+  setOnlineCustomers: (ids: string[]) => void;
+  addOnlineCustomer: (id: string) => void;
+  removeOnlineCustomer: (id: string) => void;
   setCustomerSession: (cust: Customer, conv: Conversation) => void;
   deleteConversation: (id: string) => Promise<void>;
 
@@ -93,6 +97,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   replyToMessage: null,
   typingState: {},
+  onlineCustomers: [],
+
+  setOnlineCustomers: (ids) => set({ onlineCustomers: ids }),
+  addOnlineCustomer: (id) => set((state) => ({
+    onlineCustomers: state.onlineCustomers.includes(id) ? state.onlineCustomers : [...state.onlineCustomers, id]
+  })),
+  removeOnlineCustomer: (id) => set((state) => ({
+    onlineCustomers: state.onlineCustomers.filter(cId => cId !== id)
+  })),
 
   isLoadingConversations: false,
   isLoadingMessages: false,
@@ -167,8 +180,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
       (activeConversation && activeConversation._id === msg.conversation) ||
       (customerConversation && customerConversation._id === msg.conversation)
     ) {
-      const exists = messages.some(m => m._id === msg._id);
-      if (!exists) {
+      const existingIndex = messages.findIndex(m => 
+        m._id === msg._id || 
+        (m._id.startsWith('temp_') && m.content === msg.content && m.senderType === msg.senderType)
+      );
+
+      if (existingIndex !== -1) {
+        const updated = [...messages];
+        updated[existingIndex] = { ...updated[existingIndex], ...msg, _id: msg._id };
+        set({ messages: updated });
+      } else {
         set({ messages: [...messages, msg] });
       }
     }

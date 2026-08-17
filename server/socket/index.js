@@ -7,12 +7,22 @@ export const setupSocket = (io) => {
   io.on('connection', (socket) => {
     console.log(`🔌 New Socket Connection: ${socket.id}`);
 
+    // Send initial agent presence to newly connected socket
+    socket.emit('agent_presence', {
+      status: onlineAgents.size > 0 ? 'online' : 'offline',
+      onlineCount: onlineAgents.size
+    });
+
     // Join Agent global admin stream
     socket.on('join_agent_workspace', ({ userId }) => {
       socket.join('agent_workspace_room');
       onlineAgents.set(userId, socket.id);
       console.log(`🟢 Agent ${userId} is ONLINE (Socket: ${socket.id})`);
       io.emit('agent_presence', { status: 'online', onlineCount: onlineAgents.size });
+      // Send all current online customer IDs to this admin
+      socket.emit('online_customers_list', {
+        onlineCustomers: Array.from(onlineCustomers.keys())
+      });
     });
 
     // Join specific conversation room (Chat opened on screen)
@@ -23,8 +33,20 @@ export const setupSocket = (io) => {
 
       if (role === 'agent' && userId) {
         onlineAgents.set(userId, socket.id);
+        io.emit('agent_presence', { status: 'online', onlineCount: onlineAgents.size });
       } else if (role === 'customer' && userId) {
         onlineCustomers.set(userId, socket.id);
+        // Broadcast to admin workspace that customer is online
+        io.to('agent_workspace_room').emit('customer_presence', {
+          customerId: userId,
+          status: 'online',
+          onlineCustomers: Array.from(onlineCustomers.keys())
+        });
+        // Reply with current agent presence status
+        socket.emit('agent_presence', {
+          status: onlineAgents.size > 0 ? 'online' : 'offline',
+          onlineCount: onlineAgents.size
+        });
       }
 
       // Automatically mark all messages as READ when room is opened
@@ -200,6 +222,12 @@ export const setupSocket = (io) => {
       for (const [cId, sId] of onlineCustomers.entries()) {
         if (sId === socket.id) {
           onlineCustomers.delete(cId);
+          console.log(`🔴 Customer ${cId} is OFFLINE`);
+          io.to('agent_workspace_room').emit('customer_presence', {
+            customerId: cId,
+            status: 'offline',
+            onlineCustomers: Array.from(onlineCustomers.keys())
+          });
           break;
         }
       }
