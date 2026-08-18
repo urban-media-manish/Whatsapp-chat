@@ -4,42 +4,40 @@ import { generateToken, protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Auto seed initial admin & agents on startup/demand
+// Auto seed single dedicated admin & remove all demo accounts
 export const seedInitialUsers = async () => {
   try {
-    const adminCount = await User.countDocuments({ role: 'admin' });
-    if (adminCount === 0) {
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@official.com').toLowerCase().trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@Secret2026';
+    const adminName = process.env.ADMIN_NAME || 'Super Admin';
+
+    // Remove all old demo accounts
+    await User.deleteMany({
+      email: { $in: ['agent@support.com', 'manager@support.com', 'admin@support.com'] }
+    });
+
+    // Check if designated admin user exists
+    let adminUser = await User.findOne({ email: adminEmail });
+    if (!adminUser) {
+      // Clean up any remaining non-matching users to ensure only 1 admin exists
+      await User.deleteMany({});
+
       await User.create({
-        name: 'Sarah Connor (Admin)',
-        email: 'admin@support.com',
-        password: 'admin123',
+        name: adminName,
+        email: adminEmail,
+        password: adminPassword,
         role: 'admin',
-        phone: '+1 (555) 019-2831',
+        phone: '+91 98765 43210',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         status: 'online'
       });
-      await User.create({
-        name: 'Alex Rivera (Support Agent)',
-        email: 'agent@support.com',
-        password: 'agent123',
-        role: 'agent',
-        phone: '+1 (555) 014-9921',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        status: 'online'
-      });
-      await User.create({
-        name: 'Elena Rostova (Manager)',
-        email: 'manager@support.com',
-        password: 'manager123',
-        role: 'manager',
-        phone: '+1 (555) 017-8822',
-        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-        status: 'online'
-      });
-      console.log('✅ Default users seeded successfully: admin@support.com / admin123, agent@support.com / agent123');
+      console.log(`🔒 Single Dedicated Admin seeded: ${adminEmail}`);
+    } else {
+      // Delete any other users to keep strictly ONE single admin
+      await User.deleteMany({ _id: { $ne: adminUser._id } });
     }
   } catch (err) {
-    console.error('Error seeding initial users:', err);
+    console.error('Error seeding single admin user:', err);
   }
 };
 
