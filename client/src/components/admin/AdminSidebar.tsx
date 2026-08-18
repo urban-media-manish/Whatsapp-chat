@@ -391,12 +391,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete chat with ${conv.customer?.name || 'Customer'}?`)) {
+                            if (confirm(`Delete chat with ${conv.customer?.name || 'Customer'}? This action cannot be undone.`)) {
                               deleteConversation(conv._id);
                             }
                           }}
                           title="Delete Chat"
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 text-[#8696a0] hover:text-red-500 rounded-lg transition-all"
+                          className="opacity-60 sm:opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/15 text-[#8696a0] hover:text-red-500 rounded-lg transition-all active:scale-90 cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

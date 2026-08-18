@@ -47,6 +47,7 @@ interface ChatState {
   removeOnlineCustomer: (id: string) => void;
   setCustomerSession: (cust: Customer, conv: Conversation) => void;
   deleteConversation: (id: string) => Promise<void>;
+  clearChat: (id: string) => Promise<void>;
 
   setSearchQuery: (q: string) => void;
   setActiveFilter: (f: 'all' | 'unread' | 'mine' | 'pinned' | 'archived') => void;
@@ -175,10 +176,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   addMessage: (msg: Message) => {
     const { activeConversation, customerConversation, messages, conversations } = get();
+    const msgConvId = typeof msg.conversation === 'object' && msg.conversation !== null
+      ? (msg.conversation as any)._id
+      : msg.conversation;
 
     if (
-      (activeConversation && activeConversation._id === msg.conversation) ||
-      (customerConversation && customerConversation._id === msg.conversation)
+      (activeConversation && activeConversation._id === msgConvId) ||
+      (customerConversation && customerConversation._id === msgConvId)
     ) {
       const existingIndex = messages.findIndex(m => 
         m._id === msg._id || 
@@ -194,24 +198,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
     }
 
-    const updatedConvs = conversations.map(c => {
-      if (c._id === msg.conversation) {
-        return {
-          ...c,
-          lastMessage: {
-            content: msg.content || msg.fileName || `[${msg.type}]`,
-            senderType: msg.senderType,
-            type: msg.type,
-            timestamp: msg.createdAt
-          },
-          updatedAt: msg.createdAt,
-          unreadCount: (activeConversation?._id === c._id) ? 0 : c.unreadCount + 1
-        };
-      }
-      return c;
-    });
+    const conversationExists = conversations.some(c => c._id === msgConvId);
+    if (!conversationExists) {
+      get().fetchConversations();
+    } else {
+      const updatedConvs = conversations.map(c => {
+        if (c._id === msgConvId) {
+          return {
+            ...c,
+            lastMessage: {
+              content: msg.content || msg.fileName || `[${msg.type}]`,
+              senderType: msg.senderType,
+              type: msg.type,
+              timestamp: msg.createdAt
+            },
+            updatedAt: msg.createdAt,
+            unreadCount: (activeConversation?._id === c._id) ? 0 : (c.unreadCount || 0) + 1
+          };
+        }
+        return c;
+      }).sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+      });
 
-    set({ conversations: updatedConvs });
+      set({ conversations: updatedConvs });
+    }
   },
 
   markAllMessagesRead: (conversationId) => {
@@ -288,6 +301,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } catch (err) {
       console.error('Delete conversation error:', err);
       alert('Failed to delete conversation');
+    }
+  },
+
+  clearChat: async (id: string) => {
+    try {
+      await api.clearChat(id);
+      set((state) => ({
+        messages: state.activeConversation?._id === id ? [] : state.messages,
+        conversations: state.conversations.map(c =>
+          c._id === id
+            ? { ...c, lastMessage: { content: 'Chat history was cleared', senderType: 'system', type: 'text', timestamp: new Date().toISOString() }, unreadCount: 0 }
+            : c
+        )
+      }));
+    } catch (err) {
+      console.error('Clear chat error:', err);
+      alert('Failed to clear chat');
     }
   }
 }));

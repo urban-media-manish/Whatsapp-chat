@@ -51,45 +51,45 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    socket.on('receive_message', (msg: Message) => {
+    const handleReceive = (msg: Message) => {
       addMessage(msg);
-    });
+    };
 
-    socket.on('new_conversation', () => {
+    const handleNewConv = () => {
       fetchConversations();
-    });
+    };
 
-    socket.on('conversation_activity', (msg: Message) => {
+    const handleConvActivity = (msg: Message) => {
       addMessage(msg);
       fetchConversations();
-    });
+    };
 
-    socket.on('conversation_deleted', ({ conversationId }: { conversationId: string }) => {
+    const handleConvDeleted = ({ conversationId }: { conversationId: string }) => {
       const store = useChatStore.getState();
       if (store.activeConversation?._id === conversationId) {
         store.setActiveConversation(null);
       }
       store.fetchConversations();
-    });
+    };
 
-    socket.on('message_deleted', ({ conversationId }: { conversationId: string }) => {
+    const handleMsgDeleted = ({ conversationId }: { conversationId: string }) => {
       const store = useChatStore.getState();
       if (store.activeConversation?._id === conversationId) {
         store.fetchMessages(conversationId);
       }
       store.fetchConversations();
-    });
+    };
 
-    socket.on('user_typing', ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
+    const handleTyping = ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
       const store = useChatStore.getState();
       store.setTyping(conversationId, senderName, isTyping, senderType);
-    });
+    };
 
-    socket.on('online_customers_list', ({ onlineCustomers }: { onlineCustomers: string[] }) => {
+    const handleOnlineList = ({ onlineCustomers }: { onlineCustomers: string[] }) => {
       useChatStore.getState().setOnlineCustomers(onlineCustomers || []);
-    });
+    };
 
-    socket.on('customer_presence', ({ customerId, status, onlineCustomers }: { customerId: string; status: string; onlineCustomers?: string[] }) => {
+    const handleCustomerPresence = ({ customerId, status, onlineCustomers }: { customerId: string; status: string; onlineCustomers?: string[] }) => {
       const store = useChatStore.getState();
       if (onlineCustomers) {
         store.setOnlineCustomers(onlineCustomers);
@@ -98,17 +98,40 @@ export const AdminPage: React.FC = () => {
       } else {
         store.removeOnlineCustomer(customerId);
       }
-    });
+    };
+
+    const handleReadAck = ({ conversationId }: { conversationId: string }) => {
+      useChatStore.getState().markAllMessagesRead(conversationId);
+    };
+
+    const handleStatusUpdate = ({ messageId, status }: { messageId: string; status: any }) => {
+      useChatStore.setState((state) => ({
+        messages: state.messages.map((m) => (m._id === messageId ? { ...m, status } : m))
+      }));
+    };
+
+    socket.on('receive_message', handleReceive);
+    socket.on('new_conversation', handleNewConv);
+    socket.on('conversation_activity', handleConvActivity);
+    socket.on('conversation_deleted', handleConvDeleted);
+    socket.on('message_deleted', handleMsgDeleted);
+    socket.on('user_typing', handleTyping);
+    socket.on('online_customers_list', handleOnlineList);
+    socket.on('customer_presence', handleCustomerPresence);
+    socket.on('messages_read_ack', handleReadAck);
+    socket.on('message_status_update', handleStatusUpdate);
 
     return () => {
-      socket.off('receive_message');
-      socket.off('new_conversation');
-      socket.off('conversation_activity');
-      socket.off('conversation_deleted');
-      socket.off('message_deleted');
-      socket.off('user_typing');
-      socket.off('online_customers_list');
-      socket.off('customer_presence');
+      socket.off('receive_message', handleReceive);
+      socket.off('new_conversation', handleNewConv);
+      socket.off('conversation_activity', handleConvActivity);
+      socket.off('conversation_deleted', handleConvDeleted);
+      socket.off('message_deleted', handleMsgDeleted);
+      socket.off('user_typing', handleTyping);
+      socket.off('online_customers_list', handleOnlineList);
+      socket.off('customer_presence', handleCustomerPresence);
+      socket.off('messages_read_ack', handleReadAck);
+      socket.off('message_status_update', handleStatusUpdate);
     };
   }, [socket]);
 

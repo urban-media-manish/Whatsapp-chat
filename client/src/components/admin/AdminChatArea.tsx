@@ -6,7 +6,7 @@ import { getSocket } from '../../services/socket';
 import { MessageBubble } from '../chat/MessageBubble';
 import { MessageInput } from '../chat/MessageInput';
 import { VoiceCallModal } from '../chat/VoiceCallModal';
-import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText, ArrowLeft } from 'lucide-react';
+import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText, ArrowLeft, Trash2, MoreVertical, Eraser, UserCheck } from 'lucide-react';
 import type { User, Message } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsPdf, exportChatAsTxt } from '../../utils/exportChat';
@@ -17,16 +17,31 @@ interface AdminChatAreaProps {
 }
 
 export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPanel, showContextPanel }) => {
-  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, onlineCustomers, setActiveConversation } = useChatStore();
+  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, onlineCustomers, setActiveConversation, deleteConversation, clearChat } = useChatStore();
   const { user } = useAuthStore();
   const [agents, setAgents] = useState<User[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showVoiceCall, setShowVoiceCall] = useState(false);
   const [isAiBotActive, setIsAiBotActive] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const socket = getSocket();
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     loadAgents();
@@ -48,7 +63,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
   }, [activeConversation?._id]);
 
   useEffect(() => {
-    socket.on('receive_message', (msg: Message) => {
+    const handleReceive = (msg: Message) => {
       addMessage(msg);
       sounds.playReceived();
       if (activeConversation) {
@@ -77,32 +92,37 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           }, 1200);
         }
       }
-    });
+    };
 
-    socket.on('messages_read_ack', ({ conversationId }: { conversationId: string }) => {
+    const handleReadAck = ({ conversationId }: { conversationId: string }) => {
       markAllMessagesRead(conversationId);
-    });
+    };
 
-    socket.on('message_status_update', ({ messageId, status }: { messageId: string; status: any }) => {
+    const handleStatusUpdate = ({ messageId, status }: { messageId: string; status: any }) => {
       useChatStore.setState((state) => ({
         messages: state.messages.map((m) =>
           m._id === messageId ? { ...m, status } : m
         )
       }));
-    });
+    };
 
-    socket.on('user_typing', ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
+    const handleTyping = ({ conversationId, senderName, senderType, isTyping }: { conversationId: string; senderName: string; senderType: string; isTyping: boolean }) => {
       const store = useChatStore.getState();
       store.setTyping(conversationId, senderName, isTyping, senderType);
-    });
+    };
+
+    socket.on('receive_message', handleReceive);
+    socket.on('messages_read_ack', handleReadAck);
+    socket.on('message_status_update', handleStatusUpdate);
+    socket.on('user_typing', handleTyping);
 
     return () => {
-      socket.off('receive_message');
-      socket.off('messages_read_ack');
-      socket.off('message_status_update');
-      socket.off('user_typing');
+      socket.off('receive_message', handleReceive);
+      socket.off('messages_read_ack', handleReadAck);
+      socket.off('message_status_update', handleStatusUpdate);
+      socket.off('user_typing', handleTyping);
     };
-  }, [socket, activeConversation, isAiBotActive, user?._id]);
+  }, [socket, activeConversation?._id, isAiBotActive, user?._id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -168,6 +188,32 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
   const handleExportTXT = () => {
     if (!activeConversation) return;
     exportChatAsTxt(messages, activeConversation.customer?.name || 'Customer');
+  };
+
+  const handleDeleteChat = async () => {
+    if (!activeConversation) return;
+    try {
+      setIsProcessing(true);
+      await deleteConversation(activeConversation._id);
+      setShowDeleteModal(false);
+    } catch (err) {
+      console.error('Delete chat error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (!activeConversation) return;
+    try {
+      setIsProcessing(true);
+      await clearChat(activeConversation._id);
+      setShowClearModal(false);
+    } catch (err) {
+      console.error('Clear chat error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!activeConversation) {
@@ -246,7 +292,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <button
             onClick={() => setIsAiBotActive(!isAiBotActive)}
             title={isAiBotActive ? 'AI Auto-Bot is ON' : 'Turn ON AI Auto-Bot'}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all border ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
               isAiBotActive
                 ? 'bg-[#00a884]/20 text-[#00a884] border-[#00a884]/40 shadow-xs'
                 : 'bg-white dark:bg-[#111b21] text-[#8696a0] border-black/[0.06] dark:border-white/[0.08] hover:text-[#111b21] dark:hover:text-white'
@@ -296,7 +342,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <button
             onClick={() => setShowVoiceCall(true)}
             title="WhatsApp Voice Call"
-            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95"
+            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95 cursor-pointer"
           >
             <Phone className="w-4 h-4" />
           </button>
@@ -305,19 +351,70 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           <button
             onClick={handleExportPDF}
             title="Export Chat PDF"
-            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95"
+            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95 cursor-pointer hidden sm:block"
           >
             <Download className="w-4 h-4" />
           </button>
-          
-          {/* Export TXT Button */}
+
+          {/* Delete Chat Direct Button */}
           <button
-            onClick={handleExportTXT}
-            title="Export Chat TXT"
-            className="p-2 text-[#8696a0] hover:text-[#111b21] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-xl transition-all active:scale-95"
+            onClick={() => setShowDeleteModal(true)}
+            title="Delete Entire Chat"
+            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-xl transition-all active:scale-95 cursor-pointer"
           >
-            <FileText className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" />
           </button>
+
+          {/* More Options Dropdown Menu */}
+          <div ref={moreMenuRef} className="relative">
+            <button
+              onClick={() => setShowMoreMenu(p => !p)}
+              title="More Actions"
+              className={`p-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                showMoreMenu
+                  ? 'bg-black/10 dark:bg-white/15 text-[#111b21] dark:text-white'
+                  : 'text-[#8696a0] hover:text-[#111b21] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+              }`}
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {showMoreMenu && (
+              <div className="absolute right-0 top-11 w-56 bg-white dark:bg-[#233138] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-[#111b21] dark:text-[#e9edef]">
+                <button
+                  onClick={() => { setShowMoreMenu(false); onToggleContextPanel && onToggleContextPanel(); }}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <UserCheck className="w-4 h-4 text-[#00a884]" /> View Customer Profile
+                </button>
+                <button
+                  onClick={() => { setShowMoreMenu(false); handleExportPDF(); }}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-[#00a884]" /> Export Chat (PDF)
+                </button>
+                <button
+                  onClick={() => { setShowMoreMenu(false); handleExportTXT(); }}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-[#8696a0]" /> Export Chat (TXT)
+                </button>
+                <div className="border-t border-black/[0.04] dark:border-white/[0.06] my-1" />
+                <button
+                  onClick={() => { setShowMoreMenu(false); setShowClearModal(true); }}
+                  className="w-full text-left px-4 py-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
+                >
+                  <Eraser className="w-4 h-4 text-amber-500" /> Clear Messages History
+                </button>
+                <button
+                  onClick={() => { setShowMoreMenu(false); setShowDeleteModal(true); }}
+                  className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors font-semibold cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-red-500" /> Delete Entire Chat
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -399,6 +496,84 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
         senderName={user?.name || 'Support Agent'}
         isAgentView={true}
       />
+
+      {/* Delete Chat Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
+            onClick={() => !isProcessing && setShowDeleteModal(false)}
+          />
+          <div className="relative w-full max-w-sm bg-white dark:bg-[#202c33] rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] p-5 z-10 animate-in fade-in zoom-in-95 text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/15 text-red-500 flex items-center justify-center mx-auto mb-3.5 shadow-xs">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-[#111b21] dark:text-[#e9edef]">
+              Delete chat with {customerName}?
+            </h3>
+            <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1.5 leading-relaxed">
+              This will permanently delete this conversation and all its messages. This action cannot be undone.
+            </p>
+            <div className="flex items-center gap-2.5 mt-5">
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] text-xs font-semibold text-[#111b21] dark:text-[#e9edef] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={handleDeleteChat}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-md shadow-red-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer disabled:opacity-50"
+              >
+                {isProcessing ? 'Deleting...' : 'Delete Chat'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Messages Confirmation Modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in"
+            onClick={() => !isProcessing && setShowClearModal(false)}
+          />
+          <div className="relative w-full max-w-sm bg-white dark:bg-[#202c33] rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] p-5 z-10 animate-in fade-in zoom-in-95 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-500/15 text-amber-500 flex items-center justify-center mx-auto mb-3.5 shadow-xs">
+              <Eraser className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-bold text-[#111b21] dark:text-[#e9edef]">
+              Clear messages in this chat?
+            </h3>
+            <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1.5 leading-relaxed">
+              All messages in this conversation will be cleared, but the customer contact will remain in your list.
+            </p>
+            <div className="flex items-center gap-2.5 mt-5">
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-black/[0.08] dark:border-white/[0.1] text-xs font-semibold text-[#111b21] dark:text-[#e9edef] hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isProcessing}
+                onClick={handleClearChat}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-md shadow-amber-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer disabled:opacity-50"
+              >
+                {isProcessing ? 'Clearing...' : 'Clear History'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

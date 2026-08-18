@@ -1,6 +1,7 @@
 import express from 'express';
 import { Message } from '../models/Message.js';
 import { Conversation } from '../models/Conversation.js';
+import { Customer } from '../models/Customer.js';
 import { onlineAgents, onlineCustomers, activeChatRooms } from '../socket/index.js';
 
 const router = express.Router();
@@ -148,6 +149,11 @@ router.post('/', async (req, res) => {
         } else {
           conversation.unreadCount += 1;
         }
+        if (conversation.customer) {
+          await Customer.findByIdAndUpdate(conversation.customer, {
+            $set: { isGuest: false, lastSeen: new Date() }
+          });
+        }
       } else if (senderType === 'agent') {
         if (initialStatus === 'read') {
           conversation.unreadCountCustomer = 0;
@@ -164,6 +170,7 @@ router.post('/', async (req, res) => {
     if (req.io) {
       req.io.to(`conv_${conversationId}`).emit('receive_message', populatedMsg);
       req.io.to('agent_workspace_room').emit('conversation_activity', populatedMsg);
+      req.io.to('agent_workspace_room').emit('new_conversation', conversation);
     }
 
     res.status(201).json(populatedMsg);

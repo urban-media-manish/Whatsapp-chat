@@ -48,11 +48,18 @@ router.get('/', protect, async (req, res) => {
       .populate('assignedAgent', 'name avatar role email phone status')
       .sort({ isPinned: -1, updatedAt: -1 });
 
-    // Filter out dummy/passive guests that haven't submitted details
+    // Filter out pure passive guest sessions (guest with 0 customer messages/interactions)
     conversations = conversations.filter(conv => {
       if (!conv.customer) return false;
-      const isDummyGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
-      return !isDummyGuest;
+      const isGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
+      if (!isGuest) return true;
+
+      // For guests, include if customer has sent messages, has unread, has assigned agent, or has tags
+      const hasInteraction = conv.lastMessage?.senderType === 'customer' ||
+                             (conv.unreadCount && conv.unreadCount > 0) ||
+                             (conv.tags && conv.tags.length > 0) ||
+                             Boolean(conv.assignedAgent);
+      return Boolean(hasInteraction);
     });
 
     if (search && search.trim() !== '') {
@@ -65,19 +72,15 @@ router.get('/', protect, async (req, res) => {
       });
     }
 
-    // Deduplicate conversations by unique customer name / phone number
-    const seenKeys = new Set();
+    // Deduplicate conversations per unique customer ID (preserve the most recent conversation per customer)
+    const seenCustomers = new Set();
     const deduplicatedConvs = [];
 
     for (const conv of conversations) {
-      const custName = (conv.customer?.name || '').toLowerCase().trim();
-      const firstName = custName.split(' ')[0];
-      const key = (firstName && firstName !== 'anonymous' && !firstName.startsWith('guest_'))
-        ? firstName
-        : (conv.customer?.phone ? conv.customer.phone.trim() : conv._id.toString());
+      const custId = conv.customer?._id?.toString() || conv._id.toString();
 
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
+      if (!seenCustomers.has(custId)) {
+        seenCustomers.add(custId);
         deduplicatedConvs.push(conv);
       }
     }
@@ -265,6 +268,46 @@ router.get('/meta/quick-replies', protect, async (req, res) => {
   }
 });
 
+// @route POST /api/conversations/:id/clear
+// Clear all messages in the conversation but keep conversation structure
+router.post('/:id/clear', protect, async (req, res) => {
+  try {
+    const conversationId = req.params.id;
+    const conversation = await Conversation.findById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ message: 'Conversation not found' });
+    }
+
+    const { Message } = await import('../models/Message.js');
+    await Message.deleteMany({ conversation: conversationId });
+
+    conversation.lastMessage = {
+      content: 'Chat history was cleared',
+      senderType: 'system',
+      type: 'text',
+      timestamp: new Date()
+    };
+    conversation.unreadCount = 0;
+    conversation.unreadCountCustomer = 0;
+    await conversation.save();
+
+    if (req.io) {
+      req.io.to(`conv_${conversationId}`).emit('chat_cleared', { conversationId });
+      req.io.to('agent_workspace_room').emit('conversation_activity', {
+        conversation: conversationId,
+        content: 'Chat history was cleared',
+        senderType: 'system',
+        createdAt: new Date().toISOString()
+      });
+      req.io.to('agent_workspace_room').emit('new_conversation');
+    }
+
+    res.json({ success: true, message: 'Chat cleared successfully', conversation });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // @route DELETE /api/conversations/:id
 // Delete complete conversation chat and all its messages
 router.delete('/:id', protect, async (req, res) => {
@@ -282,6 +325,8 @@ router.delete('/:id', protect, async (req, res) => {
     // Broadcast socket event
     if (req.io) {
       req.io.emit('conversation_deleted', { conversationId });
+      req.io.to('agent_workspace_room').emit('conversation_deleted', { conversationId });
+      req.io.to(`conv_${conversationId}`).emit('conversation_deleted', { conversationId });
     }
 
     res.json({ success: true, message: 'Conversation deleted successfully' });
