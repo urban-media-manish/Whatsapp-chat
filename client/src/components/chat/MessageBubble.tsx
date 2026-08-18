@@ -210,13 +210,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
           </div>
         )}
 
-        {/* Sender Name Label */}
-        {!isSentByMe && isAgentView && (
-          <p className="text-[11px] font-bold text-[#00a884] mb-0.5">
-            {message.senderName || 'Support Agent'}
-          </p>
-        )}
-
         {/* Quoted Reply Snippet */}
         {message.replyToSnippet && (
           <div className="mb-1.5 p-2 rounded-xl text-xs border-l-3 border-[#00a884] bg-black/[0.04] dark:bg-black/30">

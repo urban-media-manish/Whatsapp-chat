@@ -40,15 +40,25 @@ router.post('/', upload.single('file'), (req, res) => {
   }
 
   const fileUrl = `/uploads/${req.file.filename}`;
-  let type = 'file';
-  const mime = req.file.mimetype;
+  let type = 'document';
+  const mime = (req.file.mimetype || '').toLowerCase();
+  const ext = (path.extname(req.file.originalname) || '').toLowerCase();
 
-  if (mime.startsWith('image/')) type = 'image';
-  else if (mime.startsWith('audio/')) type = 'audio';
-  else if (mime.startsWith('video/')) type = 'video';
-  else if (mime === 'application/pdf') type = 'pdf';
-  else if (mime.includes('word') || mime.includes('document')) type = 'document';
-  else if (mime.includes('excel') || mime.includes('sheet')) type = 'document';
+  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.heic', '.heif', '.avif', '.ico'];
+  const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'];
+  const audioExts = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.webm'];
+
+  if (mime.startsWith('image/') || imageExts.includes(ext)) {
+    type = 'image';
+  } else if (mime.startsWith('video/') || videoExts.includes(ext)) {
+    type = 'video';
+  } else if (mime.startsWith('audio/') || audioExts.includes(ext)) {
+    type = 'audio';
+  } else if (mime === 'application/pdf' || ext === '.pdf') {
+    type = 'pdf';
+  } else {
+    type = 'document';
+  }
 
   res.json({
     fileUrl,

@@ -146,18 +146,29 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  if (type === 'image') {
+  const cleanFileName = (fileName || fileUrl || '').toLowerCase();
+  const isImageFile = type === 'image' ||
+    /\.(jpg|jpeg|png|gif|webp|svg|bmp|heic|heif|avif)($|\?)/i.test(cleanFileName) ||
+    fileUrl.startsWith('data:image/') ||
+    fileUrl.startsWith('blob:');
+
+  const isVideoFile = type === 'video' || /\.(mp4|mov|avi|mkv|webm|3gp)($|\?)/i.test(cleanFileName);
+  const isAudioFile = type === 'audio' || /\.(mp3|wav|ogg|m4a|aac)($|\?)/i.test(cleanFileName);
+  const isPdfFile = type === 'pdf' || cleanFileName.endsWith('.pdf') || cleanFileName.includes('.pdf?');
+
+  if (isImageFile) {
     return (
-      <div className="mt-1 relative group rounded-lg overflow-hidden border border-black/5 dark:border-white/10 max-w-sm">
+      <div className="mt-1 relative group rounded-xl overflow-hidden border border-black/10 dark:border-white/10 max-w-xs sm:max-w-sm bg-black/5 dark:bg-white/5">
         <img
           src={fullSrc}
           alt={fileName || 'Attached Image'}
-          className="w-full max-h-72 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+          className="w-full max-h-72 object-cover cursor-pointer hover:scale-[1.02] transition-transform duration-200 block"
+          loading="lazy"
           onClick={() => setShowLightbox(true)}
         />
         {showLightbox && (
-          <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setShowLightbox(false)}>
-            <button className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 hover:bg-white/40">
+          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowLightbox(false)}>
+            <button className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 hover:bg-white/40 cursor-pointer">
               <X className="w-6 h-6" />
             </button>
             <img src={fullSrc} alt={fileName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
@@ -167,19 +178,19 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
     );
   }
 
-  if (type === 'video') {
+  if (isVideoFile) {
     return (
-      <div className="mt-1 rounded-lg overflow-hidden max-w-sm border border-black/10 dark:border-white/10">
-        <video controls src={fullSrc} className="w-full max-h-72 object-cover rounded-lg" />
+      <div className="mt-1 rounded-xl overflow-hidden max-w-xs sm:max-w-sm border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
+        <video controls src={fullSrc} className="w-full max-h-72 object-cover rounded-xl" />
       </div>
     );
   }
 
-  if (type === 'audio') {
+  if (isAudioFile) {
     return <WhatsAppAudioPlayer src={fullSrc} />;
   }
 
-  if (type === 'pdf') {
+  if (isPdfFile) {
     return (
       <div className="mt-1 flex items-center justify-between p-3 rounded-xl bg-red-500/10 border border-red-500/20 max-w-sm">
         <div className="flex items-center gap-3 overflow-hidden">

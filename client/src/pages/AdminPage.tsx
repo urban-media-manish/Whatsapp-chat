@@ -25,7 +25,7 @@ export const AdminPage: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate('/admin/login');
+      navigate('/admin/login', { replace: true });
     } else if (isAuthenticated) {
       fetchConversations();
       socket.emit('join_agent_workspace', { userId: user?._id });
@@ -174,7 +174,7 @@ export const AdminPage: React.FC = () => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="h-screen w-full flex bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-300 font-sans">
+    <div className="h-[100dvh] w-full flex bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-300 font-sans">
       <AdminSidebar currentTab={currentTab} onSelectTab={(tab) => setCurrentTab(tab)} />
 
       {currentTab === 'chats' ? (

@@ -15,38 +15,28 @@ router.get('/:conversationId', async (req, res) => {
       .populate('replyTo')
       .sort({ createdAt: 1 });
 
-    // Clean up any duplicate consecutive welcome messages and old system greetings
+    // Clean up any old system greetings
     const cleanMessages = [];
-    const seenWelcome = new Set();
+    const seenMsgIds = new Set();
     for (const msg of messages) {
       if (msg.senderType === 'system' || (msg.content && msg.content.includes('Welcome to our Live Support'))) {
         Message.findByIdAndDelete(msg._id).catch(() => {});
         continue;
       }
 
-      if (msg.senderId === 'agent_auto_welcome' || (msg.content && msg.content.includes('DlAM0ND'))) {
-        const key = (msg.content || '').trim();
-        if (!seenWelcome.has(key)) {
-          seenWelcome.add(key);
-          cleanMessages.push(msg);
-        } else {
-          // Remove duplicate from database
-          Message.findByIdAndDelete(msg._id).catch(() => {});
-        }
-      } else {
+      if (!seenMsgIds.has(msg._id.toString())) {
+        seenMsgIds.add(msg._id.toString());
         cleanMessages.push(msg);
       }
     }
 
-    // Sort to guarantee 1st message is Welcome card and 2nd is prompt
+    // Sort by creation time; guarantee initial prompt is at the top if present
     cleanMessages.sort((a, b) => {
-      const aIsWelcome = a.senderId === 'agent_auto_welcome' || (a.content && a.content.includes('DlAM0ND'));
-      const bIsWelcome = b.senderId === 'agent_auto_welcome' || (b.content && b.content.includes('DlAM0ND'));
-      const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && a.content.includes('Please share your name'));
-      const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && b.content.includes('Please share your name'));
+      const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && a.content.includes('Please enter your name'));
+      const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && b.content.includes('Please enter your name'));
 
-      if (aIsWelcome && bIsPrompt) return -1;
-      if (bIsWelcome && aIsPrompt) return 1;
+      if (aIsPrompt && !bIsPrompt) return -1;
+      if (!aIsPrompt && bIsPrompt) return 1;
 
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
@@ -136,12 +126,14 @@ router.post('/', async (req, res) => {
 
     // Update conversation lastMessage & unread counts
     if (conversation) {
+      const now = new Date();
       conversation.lastMessage = {
         content: content || fileName || `[${type || 'attachment'}]`,
         senderType,
         type: type || 'text',
-        timestamp: new Date()
+        timestamp: now
       };
+      conversation.updatedAt = now;
 
       if (senderType === 'customer') {
         if (initialStatus === 'read') {
@@ -150,9 +142,11 @@ router.post('/', async (req, res) => {
           conversation.unreadCount += 1;
         }
         if (conversation.customer) {
-          await Customer.findByIdAndUpdate(conversation.customer, {
-            $set: { isGuest: false, lastSeen: new Date() }
-          });
+          const updatePayload = { isGuest: false, lastSeen: now };
+          if (senderName && !senderName.startsWith('Guest_') && senderName !== 'Visitor') {
+            updatePayload.name = senderName;
+          }
+          await Customer.findByIdAndUpdate(conversation.customer, { $set: updatePayload });
         }
       } else if (senderType === 'agent') {
         if (initialStatus === 'read') {
@@ -171,6 +165,50 @@ router.post('/', async (req, res) => {
       req.io.to(`conv_${conversationId}`).emit('receive_message', populatedMsg);
       req.io.to('agent_workspace_room').emit('conversation_activity', populatedMsg);
       req.io.to('agent_workspace_room').emit('new_conversation', conversation);
+    }
+
+    // Auto-send Welcome Message after customer sends their name / first message (Strictly Once)
+    if (senderType === 'customer') {
+      const hasWelcome = await Message.exists({
+        conversation: conversationId,
+        $or: [
+          { senderId: 'agent_auto_welcome' },
+          { content: { $regex: 'DlAM0ND|allpanelexch9|DIAMOND', $options: 'i' } }
+        ]
+      });
+
+      if (!hasWelcome) {
+        setTimeout(async () => {
+          try {
+            const alreadySent = await Message.exists({
+              conversation: conversationId,
+              $or: [
+                { senderId: 'agent_auto_welcome' },
+                { content: { $regex: 'DlAM0ND|allpanelexch9|DIAMOND', $options: 'i' } }
+              ]
+            });
+            if (alreadySent) return;
+
+            const welcomeText = `💎 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 DlAM0ND 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 💎\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐌𝐄𝐓𝐀 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 ✅ 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐑𝐀𝐍𝐃\n━━━━━━━━━━━━━━━\nAvailable site\n\nhttps://allpanelexch9.game\n━━━━━━━━━━━━━━━\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 🆔 @ 𝟐𝟎𝟎\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 𝐁€T@ 𝟏𝟎𝟎\n𝐂𝐫𝐞𝐚𝐭𝐞 𝐘𝐨𝐮𝐫 🆔𝐓𝐡𝐫𝐨𝐮𝐠𝐡 𝐔𝐬 & 𝐆𝐞𝐭 𝟓% 𝐁0𝐍𝐔𝐒\n⚡ 𝐅𝐚𝐬𝐭 𝐃𝐞-𝐩𝐨𝐬𝐢𝐭 & 𝐖𝐢𝐭𝐡-𝐝𝐫𝐚𝐰𝐚𝐥\n🔒 𝐒𝐞𝐜𝐮𝐫𝐞 & 𝐓𝐫𝐮𝐬𝐭-𝐞𝐝 𝐏𝐥𝐚𝐭𝐟𝐨𝐫𝐦\n𝟐𝟒𝐱𝟕 𝐂𝐮𝐬𝐭𝐨𝐦𝐞𝐫 𝐒𝐮𝐩𝐩𝐨𝐫𝐭\n━━━━━━━━━━━━━━━\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐅𝐑𝐄𝐄 𝐏𝐑𝐄𝐃𝐈𝐂𝐓 & 𝐖𝐈𝐍 𝐒𝐈𝐓𝐄\n\nNote :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
+
+            const welcomeMsg = await Message.create({
+              conversation: conversationId,
+              senderType: 'agent',
+              senderId: 'agent_auto_welcome',
+              senderName: 'Support Official',
+              content: welcomeText,
+              status: 'delivered'
+            });
+
+            if (req.io) {
+              req.io.to(`conv_${conversationId}`).emit('receive_message', welcomeMsg);
+              req.io.to('agent_workspace_room').emit('conversation_activity', welcomeMsg);
+            }
+          } catch (wErr) {
+            console.error('Auto welcome error:', wErr);
+          }
+        }, 400);
+      }
     }
 
     res.status(201).json(populatedMsg);

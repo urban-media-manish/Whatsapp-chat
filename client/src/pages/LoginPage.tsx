@@ -5,16 +5,26 @@ import { MessageSquare, Lock, Mail, ArrowRight, ShieldCheck } from 'lucide-react
 import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading, error, isAuthenticated, checkAuth } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    checkAuth();
+  }, []);
+
+  React.useEffect(() => {
+    if (isAuthenticated || (typeof window !== 'undefined' && localStorage.getItem('agent_token'))) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email.trim(), password);
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } catch (err) {
       console.error(err);
     }

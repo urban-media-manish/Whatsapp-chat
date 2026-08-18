@@ -238,13 +238,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       const file = files[0];
       const res = await api.uploadFile(file);
 
+      let resolvedType = res.type || 'document';
+      const mime = (file.type || res.mimeType || '').toLowerCase();
+      const ext = (file.name || '').toLowerCase();
+      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.heic', '.heif', '.avif', '.ico'];
+
+      if (mime.startsWith('image/') || imageExts.some(e => ext.endsWith(e)) || res.type === 'image') {
+        resolvedType = 'image';
+      }
+
       const msg = await api.sendMessage({
         conversationId,
         senderType,
         senderId,
         senderName,
-        content: `[Attached ${res.type.toUpperCase()}: ${res.fileName}]`,
-        type: res.type,
+        content: `[Attached ${resolvedType.toUpperCase()}: ${res.fileName}]`,
+        type: resolvedType,
         fileUrl: res.fileUrl,
         fileName: res.fileName,
         fileSize: res.fileSize,

@@ -45,8 +45,19 @@ router.get('/', protect, async (req, res) => {
 
     let conversations = await Conversation.find(query)
       .populate('customer')
-      .populate('assignedAgent', 'name avatar role email phone status')
-      .sort({ isPinned: -1, updatedAt: -1 });
+      .populate('assignedAgent', 'name avatar role email phone status');
+
+    const getConvTimestamp = (c) => {
+      const t = c.lastMessage?.timestamp || c.updatedAt || c.createdAt;
+      return t ? new Date(t).getTime() : 0;
+    };
+
+    // Sort by latest message / interaction time
+    conversations.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return getConvTimestamp(b) - getConvTimestamp(a);
+    });
 
     // Filter out pure passive guest sessions (guest with 0 customer messages/interactions)
     conversations = conversations.filter(conv => {
@@ -84,6 +95,13 @@ router.get('/', protect, async (req, res) => {
         deduplicatedConvs.push(conv);
       }
     }
+
+    // Final sort: Pinned first, then newest message time descending
+    deduplicatedConvs.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return getConvTimestamp(b) - getConvTimestamp(a);
+    });
 
     res.json(deduplicatedConvs);
   } catch (error) {

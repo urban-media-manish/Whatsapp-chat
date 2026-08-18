@@ -3,54 +3,46 @@ import { Search, MessageSquare, BarChart2, LogOut, Pin, Trash2, MoreVertical, Se
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { installPwaApp } from '../../utils/pwa';
 
 interface AdminSidebarProps {
   currentTab: 'chats' | 'analytics' | 'settings';
   onSelectTab: (tab: 'chats' | 'analytics' | 'settings') => void;
 }
 
+const formatWhatsAppDate = (dateStr?: string | Date) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (isYesterday) {
+    return 'Yesterday';
+  } else {
+    return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+};
+
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelectTab }) => {
   const { user, logout, setStatus } = useAuthStore();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-  }, []);
 
   const handleInstallApp = async () => {
     setShowProfileMenu(false);
     setShowMobileMenu(false);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (isStandalone) {
-      alert('Admin workspace is already installed on your device!');
-      return;
-    }
-
-    if (deferredPrompt) {
-      try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        if (choice?.outcome === 'accepted') {
-          setDeferredPrompt(null);
-        }
-      } catch (err) {
-        console.error('Install error:', err);
-      }
-    } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS) {
-        alert("Tap Safari Share button (⎕↑) → 'Add to Home Screen'");
-      } else {
-        alert("Tap your browser menu (⋮) → 'Add to Home screen' or 'Install App'");
-      }
+    const res = await installPwaApp();
+    if (res.message) {
+      alert(res.message);
     }
   };
 
@@ -318,15 +310,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ currentTab, onSelect
               No conversations found.
             </div>
           ) : (
-            conversations.map((conv) => {
-              const isSelected = activeConversation?._id === conv._id;
-              const isCustomerOnline = Boolean(
-                (conv.customer?._id && onlineCustomers.includes(conv.customer._id)) ||
-                (conv.customer?.sessionId && onlineCustomers.includes(conv.customer.sessionId))
-              );
-              const timeStr = conv.lastMessage?.timestamp
-                ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : '';
+            [...conversations]
+              .sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                const aTime = a.lastMessage?.timestamp || a.updatedAt || a.createdAt;
+                const bTime = b.lastMessage?.timestamp || b.updatedAt || b.createdAt;
+                return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
+              })
+              .map((conv) => {
+                const isSelected = activeConversation?._id === conv._id;
+                const isCustomerOnline = Boolean(
+                  (conv.customer?._id && onlineCustomers.includes(conv.customer._id)) ||
+                  (conv.customer?.sessionId && onlineCustomers.includes(conv.customer.sessionId))
+                );
+                const timeStr = formatWhatsAppDate(conv.lastMessage?.timestamp || conv.updatedAt || conv.createdAt);
 
               return (
                 <div

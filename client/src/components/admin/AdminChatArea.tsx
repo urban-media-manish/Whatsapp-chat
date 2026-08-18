@@ -6,10 +6,11 @@ import { getSocket } from '../../services/socket';
 import { MessageBubble } from '../chat/MessageBubble';
 import { MessageInput } from '../chat/MessageInput';
 import { VoiceCallModal } from '../chat/VoiceCallModal';
-import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText, ArrowLeft, Trash2, MoreVertical, Eraser, UserCheck } from 'lucide-react';
+import { Download, Sparkles, RefreshCw, MessageSquare, Phone, FileText, ArrowLeft, Trash2, MoreVertical, Eraser, UserCheck, Smartphone } from 'lucide-react';
 import type { User, Message } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsPdf, exportChatAsTxt } from '../../utils/exportChat';
+import { installPwaApp } from '../../utils/pwa';
 
 interface AdminChatAreaProps {
   onToggleContextPanel?: () => void;
@@ -31,7 +32,17 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
   const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const activeConversationRef = useRef(activeConversation);
+  const isAiBotActiveRef = useRef(isAiBotActive);
+  const userRef = useRef(user);
+  const aiDebounceTimerRef = useRef<any>(null);
   const socket = getSocket();
+
+  useEffect(() => {
+    activeConversationRef.current = activeConversation;
+    isAiBotActiveRef.current = isAiBotActive;
+    userRef.current = user;
+  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -50,6 +61,7 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
     }
   }, [user?._id]);
 
+  // Fast Conversation Switch
   useEffect(() => {
     if (activeConversation) {
       socket.emit('join_conversation', {
@@ -58,27 +70,37 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
         userId: user?._id
       });
       socket.emit('mark_read', { conversationId: activeConversation._id, readerType: 'agent' });
-      fetchAISuggestions();
+
+      // Debounced AI Suggestions (runs smoothly in background)
+      if (aiDebounceTimerRef.current) clearTimeout(aiDebounceTimerRef.current);
+      aiDebounceTimerRef.current = setTimeout(() => {
+        fetchAISuggestions();
+      }, 250);
     }
+    return () => {
+      if (aiDebounceTimerRef.current) clearTimeout(aiDebounceTimerRef.current);
+    };
   }, [activeConversation?._id]);
 
+  // Stable Socket Listeners (Registered Once)
   useEffect(() => {
     const handleReceive = (msg: Message) => {
       addMessage(msg);
       sounds.playReceived();
-      if (activeConversation) {
-        socket.emit('mark_read', { conversationId: activeConversation._id, readerType: 'agent' });
+      const currentActive = activeConversationRef.current;
+      if (currentActive) {
+        socket.emit('mark_read', { conversationId: currentActive._id, readerType: 'agent' });
 
-        if (isAiBotActive && msg.senderType === 'customer') {
+        if (isAiBotActiveRef.current && msg.senderType === 'customer') {
           setTimeout(async () => {
             try {
-              const aiData = await api.getAISuggestions(activeConversation._id);
+              const aiData = await api.getAISuggestions(currentActive._id);
               if (aiData.suggestions && aiData.suggestions.length > 0) {
                 const replyText = aiData.suggestions[0];
                 const aiMsg = await api.sendMessage({
-                  conversationId: activeConversation._id,
+                  conversationId: currentActive._id,
                   senderType: 'agent',
-                  senderId: user?._id || 'ai_bot',
+                  senderId: userRef.current?._id || 'ai_bot',
                   senderName: 'Support AI Executive 🤖',
                   content: replyText
                 });
@@ -122,11 +144,11 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
       socket.off('message_status_update', handleStatusUpdate);
       socket.off('user_typing', handleTyping);
     };
-  }, [socket, activeConversation?._id, isAiBotActive, user?._id]);
+  }, [socket]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length]);
 
   const loadAgents = async () => {
     try {
@@ -216,6 +238,14 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
     }
   };
 
+  const handleInstallPwa = async () => {
+    setShowMoreMenu(false);
+    const res = await installPwaApp();
+    if (res.message) {
+      alert(res.message);
+    }
+  };
+
   if (!activeConversation) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-[#efeae2] dark:bg-[#0b141a] text-[#8696a0] p-8 text-center border-r border-[#e9edef] dark:border-[#222d34]">
@@ -235,13 +265,13 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#efeae2] dark:bg-[#0b141a] relative border-r border-[#e9edef] dark:border-[#222d34] min-w-0 overflow-hidden transition-colors duration-300">
-      {/* WhatsApp Header Bar with iOS Toolbar Controls */}
-      <div className="bg-[#f0f2f5] dark:bg-[#202c33] px-4 py-2.5 border-b border-[#e9edef] dark:border-[#222d34] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs z-10">
-        <div className="flex items-center gap-3">
+      {/* WhatsApp Clean Header Bar */}
+      <div className="bg-[#f0f2f5] dark:bg-[#202c33] px-3.5 py-2.5 border-b border-[#e9edef] dark:border-[#222d34] flex items-center justify-between gap-3 shadow-xs z-20 shrink-0 h-[58px]">
+        <div className="flex items-center gap-2.5 min-w-0">
           {/* Back Button (Mobile Only) */}
           <button
             onClick={() => setActiveConversation(null)}
-            className="p-1.5 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-full md:hidden text-[#8696a0] transition-colors"
+            className="p-1.5 hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-full md:hidden text-[#8696a0] transition-colors cursor-pointer"
             title="Back to chats"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -249,10 +279,10 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
           <button
             onClick={onToggleContextPanel}
-            className={`relative cursor-pointer group/dp focus:outline-none flex-shrink-0 rounded-full transition-all ${
+            className={`relative cursor-pointer group/dp focus:outline-none shrink-0 rounded-full transition-all ${
               showContextPanel ? 'ring-2 ring-[#00a884] ring-offset-2 ring-offset-white dark:ring-offset-[#202c33]' : ''
             }`}
-            title="Click to view full CRM customer dossier"
+            title="Click to view full CRM customer profile"
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-xs group-hover/dp:scale-105 transition-transform"
@@ -268,17 +298,19 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
             }`} />
           </button>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold tracking-tight text-[#111b21] dark:text-[#e9edef]">{customerName}</h2>
-              <span className="text-[11px] text-[#8696a0] font-mono">{activeConversation.customer?.phone}</span>
+          <div className="min-w-0 flex flex-col justify-center">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h2 className="text-sm font-semibold tracking-tight text-[#111b21] dark:text-[#e9edef] truncate">{customerName}</h2>
+              {activeConversation.customer?.phone && (
+                <span className="text-[11px] text-[#8696a0] font-mono shrink-0 hidden sm:inline">{activeConversation.customer.phone}</span>
+              )}
             </div>
-            <p className="text-[11px] font-medium leading-tight">
+            <p className="text-[11px] font-medium leading-tight truncate">
               {isCustomerTyping ? (
                 <span className="font-semibold animate-pulse text-[#00a884]">Customer is typing...</span>
               ) : (activeConversation.customer?._id && onlineCustomers.includes(activeConversation.customer._id)) ||
                   (activeConversation.customer?.sessionId && onlineCustomers.includes(activeConversation.customer.sessionId)) ? (
-                <span className="text-[#00a884]">Online • Active WhatsApp Session</span>
+                <span className="text-[#00a884]">Online</span>
               ) : (
                 <span className="text-[#8696a0]">Offline</span>
               )}
@@ -286,133 +318,151 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
           </div>
         </div>
 
-        {/* Action Controls & Selectors */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-          {/* AI Auto-Bot Switch */}
-          <button
-            onClick={() => setIsAiBotActive(!isAiBotActive)}
-            title={isAiBotActive ? 'AI Auto-Bot is ON' : 'Turn ON AI Auto-Bot'}
-            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold transition-all border cursor-pointer ${
-              isAiBotActive
-                ? 'bg-[#00a884]/20 text-[#00a884] border-[#00a884]/40 shadow-xs'
-                : 'bg-white dark:bg-[#111b21] text-[#8696a0] border-black/[0.06] dark:border-white/[0.08] hover:text-[#111b21] dark:hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>AI Bot: {isAiBotActive ? 'ON' : 'OFF'}</span>
-          </button>
-
-          {/* Priority Select */}
-          <select
-            value={activeConversation.priority}
-            onChange={(e) => handlePriorityChange(e.target.value)}
-            className="bg-white dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-2.5 py-1 outline-none font-medium"
-          >
-            <option value="low">Low Priority</option>
-            <option value="medium">Medium</option>
-            <option value="high">High Priority</option>
-            <option value="urgent">Urgent 🔥</option>
-          </select>
-
-          {/* Ticket Status Select */}
-          <select
-            value={activeConversation.status}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="bg-white dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-2.5 py-1 outline-none font-medium"
-          >
-            <option value="open">🟢 Open</option>
-            <option value="pending">🟡 Pending</option>
-            <option value="resolved">🔵 Resolved</option>
-            <option value="closed">⚪ Closed</option>
-          </select>
-
-          {/* Assign Agent Select */}
-          <select
-            value={activeConversation.assignedAgent?._id || ''}
-            onChange={(e) => handleAssignAgent(e.target.value)}
-            className="bg-white dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.08] dark:border-white/[0.08] rounded-xl px-2.5 py-1 outline-none font-medium"
-          >
-            <option value="">Unassigned</option>
-            {agents.map((ag) => (
-              <option key={ag._id} value={ag._id}>{ag.name}</option>
-            ))}
-          </select>
-
-          {/* Voice Call Button */}
+        {/* Clean Header Right Actions: Voice Call + 3-Dots Menu */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setShowVoiceCall(true)}
-            title="WhatsApp Voice Call"
-            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95 cursor-pointer"
+            title="Voice Call"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#54656f] dark:text-[#aebac1] hover:text-[#111b21] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-all active:scale-95 cursor-pointer"
           >
             <Phone className="w-4 h-4" />
           </button>
-          
-          {/* Export PDF Button */}
-          <button
-            onClick={handleExportPDF}
-            title="Export Chat PDF"
-            className="p-2 text-[#00a884] hover:bg-[#00a884]/10 rounded-xl transition-all active:scale-95 cursor-pointer hidden sm:block"
-          >
-            <Download className="w-4 h-4" />
-          </button>
 
-          {/* Delete Chat Direct Button */}
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            title="Delete Entire Chat"
-            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-xl transition-all active:scale-95 cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-
-          {/* More Options Dropdown Menu */}
+          {/* 3-Dots Dropdown Trigger */}
           <div ref={moreMenuRef} className="relative">
             <button
               onClick={() => setShowMoreMenu(p => !p)}
               title="More Actions"
-              className={`p-2 rounded-xl transition-all active:scale-95 cursor-pointer ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
                 showMoreMenu
                   ? 'bg-black/10 dark:bg-white/15 text-[#111b21] dark:text-white'
-                  : 'text-[#8696a0] hover:text-[#111b21] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                  : 'text-[#54656f] dark:text-[#aebac1] hover:text-[#111b21] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08]'
               }`}
             >
               <MoreVertical className="w-4 h-4" />
             </button>
 
             {showMoreMenu && (
-              <div className="absolute right-0 top-11 w-56 bg-white dark:bg-[#233138] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150 text-[#111b21] dark:text-[#e9edef]">
-                <button
-                  onClick={() => { setShowMoreMenu(false); onToggleContextPanel && onToggleContextPanel(); }}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <UserCheck className="w-4 h-4 text-[#00a884]" /> View Customer Profile
-                </button>
-                <button
-                  onClick={() => { setShowMoreMenu(false); handleExportPDF(); }}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <Download className="w-4 h-4 text-[#00a884]" /> Export Chat (PDF)
-                </button>
-                <button
-                  onClick={() => { setShowMoreMenu(false); handleExportTXT(); }}
-                  className="w-full text-left px-4 py-2 text-xs hover:bg-[#00a884]/10 flex items-center gap-2.5 transition-colors cursor-pointer"
-                >
-                  <FileText className="w-4 h-4 text-[#8696a0]" /> Export Chat (TXT)
-                </button>
-                <div className="border-t border-black/[0.04] dark:border-white/[0.06] my-1" />
-                <button
-                  onClick={() => { setShowMoreMenu(false); setShowClearModal(true); }}
-                  className="w-full text-left px-4 py-2 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
-                >
-                  <Eraser className="w-4 h-4 text-amber-500" /> Clear Messages History
-                </button>
-                <button
-                  onClick={() => { setShowMoreMenu(false); setShowDeleteModal(true); }}
-                  className="w-full text-left px-4 py-2 text-xs text-red-500 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors font-semibold cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" /> Delete Entire Chat
-                </button>
-              </div>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+                <div className="absolute right-0 top-11 w-72 max-w-[90vw] bg-white dark:bg-[#202c33] border border-black/[0.08] dark:border-white/[0.1] rounded-2xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 text-[#111b21] dark:text-[#e9edef] space-y-3">
+                  {/* Chat Controls & Settings in 3-Dots Menu */}
+                  <div className="space-y-2.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#8696a0] px-1">
+                      Conversation Controls
+                    </div>
+
+                    {/* AI Auto-Bot Toggle */}
+                    <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-[#f0f2f5] dark:bg-[#111b21] border border-black/[0.04] dark:border-white/[0.06]">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-semibold">AI Auto-Bot</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAiBotActive(!isAiBotActive)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isAiBotActive
+                            ? 'bg-[#00a884] text-white shadow-xs'
+                            : 'bg-black/10 dark:bg-white/10 text-[#667781] dark:text-[#8696a0]'
+                        }`}
+                      >
+                        {isAiBotActive ? 'ACTIVE' : 'OFF'}
+                      </button>
+                    </div>
+
+                    {/* Status Selector */}
+                    <div>
+                      <label className="text-[11px] font-medium text-[#8696a0] px-1 mb-1 block">Status</label>
+                      <select
+                        value={activeConversation.status}
+                        onChange={(e) => handleStatusChange(e.target.value)}
+                        className="w-full bg-[#f0f2f5] dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-3 py-2 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="open">🟢 Open</option>
+                        <option value="pending">🟡 Pending</option>
+                        <option value="resolved">🔵 Resolved</option>
+                        <option value="closed">⚪ Closed</option>
+                      </select>
+                    </div>
+
+                    {/* Priority Selector */}
+                    <div>
+                      <label className="text-[11px] font-medium text-[#8696a0] px-1 mb-1 block">Priority</label>
+                      <select
+                        value={activeConversation.priority}
+                        onChange={(e) => handlePriorityChange(e.target.value)}
+                        className="w-full bg-[#f0f2f5] dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-3 py-2 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="low">Low Priority</option>
+                        <option value="medium">Medium Priority</option>
+                        <option value="high">High Priority</option>
+                        <option value="urgent">Urgent 🔥</option>
+                      </select>
+                    </div>
+
+                    {/* Assign Agent Selector */}
+                    <div>
+                      <label className="text-[11px] font-medium text-[#8696a0] px-1 mb-1 block">Assign Agent</label>
+                      <select
+                        value={activeConversation.assignedAgent?._id || ''}
+                        onChange={(e) => handleAssignAgent(e.target.value)}
+                        className="w-full bg-[#f0f2f5] dark:bg-[#111b21] text-xs text-[#111b21] dark:text-[#e9edef] border border-black/[0.06] dark:border-white/[0.08] rounded-xl px-3 py-2 outline-none font-medium cursor-pointer"
+                      >
+                        <option value="">Unassigned</option>
+                        {agents.map((ag) => (
+                          <option key={ag._id} value={ag._id}>{ag.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-2 space-y-1">
+                    <button
+                      onClick={handleInstallPwa}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] flex items-center justify-between transition-colors cursor-pointer text-[#111b21] dark:text-[#e9edef] font-medium"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Smartphone className="w-4 h-4 text-[#00a884]" /> Add to Home screen
+                      </span>
+                      <span className="text-[10px] text-[#00a884] font-semibold bg-[#00a884]/15 px-2 py-0.5 rounded-full">App</span>
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreMenu(false); onToggleContextPanel && onToggleContextPanel(); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <UserCheck className="w-4 h-4 text-[#00a884]" /> View Customer Profile
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreMenu(false); handleExportPDF(); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-[#00a884]" /> Export Chat (PDF)
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreMenu(false); handleExportTXT(); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-[#f0f2f5] dark:hover:bg-[#111b21] flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <FileText className="w-4 h-4 text-[#8696a0]" /> Export Chat (TXT)
+                    </button>
+                  </div>
+
+                  <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-2 space-y-1">
+                    <button
+                      onClick={() => { setShowMoreMenu(false); setShowClearModal(true); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 flex items-center gap-2.5 transition-colors font-medium cursor-pointer"
+                    >
+                      <Eraser className="w-4 h-4 text-amber-500" /> Clear Messages History
+                    </button>
+                    <button
+                      onClick={() => { setShowMoreMenu(false); setShowDeleteModal(true); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl text-red-500 hover:bg-red-500/10 flex items-center gap-2.5 transition-colors font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" /> Delete Entire Chat
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -467,14 +517,36 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
 
       {/* Messages Canvas */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 chat-wallpaper">
-        {messages.map((msg) => (
-          <MessageBubble
-            key={`${msg._id}_${msg.status}`}
-            message={msg}
-            currentUserId={user?._id}
-            isAgentView={true}
-          />
-        ))}
+        {(() => {
+          const deduplicatedMessages: Message[] = [];
+          const seenMsgKeys = new Set<string>();
+
+          for (const m of messages) {
+            const isWelcome = m.senderId === 'agent_auto_welcome' || (m.content && (m.content.includes('DlAM0ND') || m.content.includes('allpanelexch9') || m.content.includes('DIAMOND')));
+            const isPrompt = m.senderId === 'agent_auto_prompt' || (m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
+
+            let msgKey = m._id || `${m.senderId}_${m.content}`;
+            if (isWelcome) {
+              msgKey = 'unique_auto_welcome';
+            } else if (isPrompt) {
+              msgKey = 'unique_auto_prompt';
+            }
+
+            if (!seenMsgKeys.has(msgKey)) {
+              seenMsgKeys.add(msgKey);
+              deduplicatedMessages.push(m);
+            }
+          }
+
+          return deduplicatedMessages.map((msg) => (
+            <MessageBubble
+              key={`${msg._id}_${msg.status}`}
+              message={msg}
+              currentUserId={user?._id}
+              isAgentView={true}
+            />
+          ));
+        })()}
 
         {isCustomerTyping && (
           <div className="flex items-center gap-1.5 bg-white/90 dark:bg-[#202c33]/90 backdrop-blur-xl px-3.5 py-2 rounded-full w-fit shadow-xs border border-black/[0.04] dark:border-white/[0.06]">

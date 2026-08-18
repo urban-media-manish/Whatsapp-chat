@@ -16,6 +16,7 @@ interface ChatState {
   conversations: Conversation[];
   activeConversation: Conversation | null;
   messages: Message[];
+  messagesCache: Record<string, Message[]>;
   quickReplies: QuickReply[];
 
   customerSession: Customer | null;
@@ -85,6 +86,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   conversations: [],
   activeConversation: null,
   messages: [],
+  messagesCache: {},
   quickReplies: [],
 
   customerSession: null,
@@ -112,7 +114,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isLoadingMessages: false,
 
   setActiveConversation: (conv) => {
-    const { conversations, activeConversation } = get();
+    const { conversations, activeConversation, messagesCache } = get();
     const socket = getSocket();
 
     if (activeConversation && activeConversation._id !== conv?._id) {
@@ -127,15 +129,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const updatedConvs = conversations.map(c =>
       c._id === conv?._id ? { ...c, unreadCount: 0 } : c
     );
+
+    // 0ms INSTANT SWITCH: Load cached messages immediately without waiting for network!
+    const cachedMsgs = conv ? (messagesCache[conv._id] || []) : [];
+
     set({
       activeConversation: conv ? { ...conv, unreadCount: 0 } : null,
       conversations: updatedConvs,
+      messages: cachedMsgs,
       replyToMessage: null
     });
+
     if (conv) {
       get().fetchMessages(conv._id);
-    } else {
-      set({ messages: [] });
     }
   },
 
@@ -164,10 +170,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   fetchMessages: async (conversationId: string) => {
-    set({ isLoadingMessages: true });
     try {
       const msgs = await api.getMessages(conversationId);
-      set({ messages: msgs, isLoadingMessages: false });
+      const { activeConversation, customerConversation, messagesCache } = get();
+      const updatedCache = { ...messagesCache, [conversationId]: msgs };
+
+      const isCurrentActive =
+        (activeConversation && activeConversation._id === conversationId) ||
+        (customerConversation && customerConversation._id === conversationId);
+
+      set({
+        messagesCache: updatedCache,
+        messages: isCurrentActive ? msgs : get().messages,
+        isLoadingMessages: false
+      });
     } catch (err) {
       console.error('Failed to fetch messages:', err);
       set({ isLoadingMessages: false });
@@ -175,31 +191,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addMessage: (msg: Message) => {
-    const { activeConversation, customerConversation, messages, conversations } = get();
+    const { activeConversation, customerConversation, messages, conversations, messagesCache } = get();
     const msgConvId = typeof msg.conversation === 'object' && msg.conversation !== null
       ? (msg.conversation as any)._id
       : msg.conversation;
 
+    // Update messagesCache for this conversation
+    const currentConvMsgs = messagesCache[msgConvId] || [];
+    const cacheIndex = currentConvMsgs.findIndex(m =>
+      m._id === msg._id ||
+      (m._id.startsWith('temp_') && m.content === msg.content && m.senderType === msg.senderType)
+    );
+    let updatedConvMsgs: Message[];
+    if (cacheIndex !== -1) {
+      updatedConvMsgs = [...currentConvMsgs];
+      updatedConvMsgs[cacheIndex] = { ...updatedConvMsgs[cacheIndex], ...msg, _id: msg._id };
+    } else {
+      updatedConvMsgs = [...currentConvMsgs, msg];
+    }
+    const updatedCache = { ...messagesCache, [msgConvId]: updatedConvMsgs };
+
+    let updatedCurrentMessages = messages;
     if (
       (activeConversation && activeConversation._id === msgConvId) ||
       (customerConversation && customerConversation._id === msgConvId)
     ) {
-      const existingIndex = messages.findIndex(m => 
-        m._id === msg._id || 
-        (m._id.startsWith('temp_') && m.content === msg.content && m.senderType === msg.senderType)
-      );
-
-      if (existingIndex !== -1) {
-        const updated = [...messages];
-        updated[existingIndex] = { ...updated[existingIndex], ...msg, _id: msg._id };
-        set({ messages: updated });
-      } else {
-        set({ messages: [...messages, msg] });
-      }
+      updatedCurrentMessages = updatedConvMsgs;
     }
 
     const conversationExists = conversations.some(c => c._id === msgConvId);
     if (!conversationExists) {
+      set({ messagesCache: updatedCache, messages: updatedCurrentMessages });
       get().fetchConversations();
     } else {
       const updatedConvs = conversations.map(c => {
@@ -223,7 +245,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
       });
 
-      set({ conversations: updatedConvs });
+      set({ messagesCache: updatedCache, messages: updatedCurrentMessages, conversations: updatedConvs });
     }
   },
 
