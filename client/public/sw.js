@@ -38,11 +38,15 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event - Network First for dynamic routes and live assets
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET and API / socket requests
+  // Skip non-GET, API, socket, and dev module requests
   if (
     event.request.method !== 'GET' ||
     event.request.url.includes('/api/') ||
     event.request.url.includes('/socket.io/') ||
+    event.request.url.includes('/@vite/') ||
+    event.request.url.includes('/@react-refresh') ||
+    event.request.url.includes('/src/') ||
+    event.request.url.includes(':5173') ||
     event.request.url.startsWith('chrome-extension://')
   ) {
     return;
