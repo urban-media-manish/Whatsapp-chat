@@ -9,6 +9,7 @@ import { GetIdModal } from '../chat/GetIdModal';
 import type { Message, MessageType } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsTxt, exportChatAsPdf } from '../../utils/exportChat';
+import { trackPixelLead } from '../../utils/pixel';
 import {
   X, Smile, Paperclip, Mic, Send,
   Bell, MoreVertical, Moon, Sun, Download, FileText,
@@ -150,11 +151,6 @@ export const CustomerChatPortal: React.FC = () => {
 
         setCustomerSession(data.customer, data.conversation);
         await fetchMessages(data.conversation._id);
-
-        // Open Get ID Modal if visitor has not submitted their name/phone
-        if (!storedName || !storedPhone || localStorage.getItem('support_id_registered') !== 'true') {
-          setShowGetIdModal(true);
-        }
 
         socket.emit('join_conversation', {
           conversationId: data.conversation._id,
@@ -419,9 +415,12 @@ export const CustomerChatPortal: React.FC = () => {
 
   // ── 6b. Quick Action Handler (Instant 0ms) ──
   const handleQuickSend = async (quickText: string) => {
-    if (quickText.includes('Get ID') && (!visitorName || !visitorPhone || localStorage.getItem('support_id_registered') !== 'true')) {
-      setShowGetIdModal(true);
-      return;
+    if (quickText.includes('Get ID')) {
+      trackPixelLead({ source: 'quick_action_get_id' });
+      if (!visitorName || !visitorPhone || localStorage.getItem('support_id_registered') !== 'true') {
+        setShowGetIdModal(true);
+        return;
+      }
     }
 
     if (!quickText.trim() || !customerConversation || !customerSession) return;
@@ -463,6 +462,12 @@ export const CustomerChatPortal: React.FC = () => {
 
   // ── 6c. Get ID Modal Submission ──
   const handleSubmitGetId = async (submittedName: string, submittedPhone: string) => {
+    trackPixelLead({
+      source: 'get_id_modal_submit',
+      name: submittedName,
+      phone: submittedPhone
+    });
+
     localStorage.setItem(NAME_KEY, submittedName);
     localStorage.setItem('customer_name', submittedName);
     localStorage.setItem(PHONE_KEY, submittedPhone);
@@ -1291,8 +1296,9 @@ export const CustomerChatPortal: React.FC = () => {
       <GetIdModal
         isOpen={showGetIdModal}
         onSubmit={handleSubmitGetId}
-        initialName={visitorName}
-        initialPhone={visitorPhone}
+        onClose={() => setShowGetIdModal(false)}
+        initialName={visitorName && !visitorName.startsWith('Guest_') ? visitorName : ''}
+        initialPhone={visitorPhone || ''}
       />
 
       {/* ═══════════════ TOAST NOTIFICATION ═══════════════ */}
