@@ -88,6 +88,21 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Serve Frontend Client Static Build (for production / fullstack hosting)
+const clientDistPath = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDistPath));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io') || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  res.sendFile(path.join(clientDistPath, 'index.html'), (err) => {
+    if (err) {
+      next();
+    }
+  });
+});
+
 // Initialize Socket.IO handlers
 setupSocket(io);
 
