@@ -9,7 +9,7 @@ import { GetIdModal } from '../chat/GetIdModal';
 import type { Message, MessageType } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsTxt, exportChatAsPdf } from '../../utils/exportChat';
-import { trackPixelLead } from '../../utils/pixel';
+import { trackPixelLead, trackPixelEvent, trackPixelPageView } from '../../utils/pixel';
 import { installPwaApp } from '../../utils/pwa';
 import {
   X, Smile, Paperclip, Mic, Send,
@@ -128,6 +128,8 @@ export const CustomerChatPortal: React.FC = () => {
     const storedPhone = localStorage.getItem(PHONE_KEY) || localStorage.getItem('customer_phone') || '';
 
     const init = async () => {
+      // Fire PageView when React chat component fully mounts (with retry polling for async fbevents.js)
+      try { trackPixelPageView(); } catch (_) {}
       try {
         const dataPromise = api.initCustomer({
           sessionId: savedSessionId || undefined,
@@ -170,15 +172,25 @@ export const CustomerChatPortal: React.FC = () => {
         const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
 
         if (!hasPrompt && (!data.customer.name || data.customer.name.startsWith('Guest_'))) {
-          const promptMsg = await api.sendMessage({
+          const promptMsg1 = await api.sendMessage({
             conversationId: data.conversation._id,
             senderType: 'agent',
             senderId: 'agent_auto_prompt',
             senderName: BRAND_NAME,
-            content: INITIAL_PROMPT_TEXT,
+            content: 'Please enter your name for Id',
             type: 'text'
           });
-          addMessage(promptMsg);
+          addMessage(promptMsg1);
+
+          const promptMsg2 = await api.sendMessage({
+            conversationId: data.conversation._id,
+            senderType: 'agent',
+            senderId: 'agent_auto_prompt2',
+            senderName: BRAND_NAME,
+            content: 'Please share your name and number for new id & bonus',
+            type: 'text'
+          });
+          addMessage(promptMsg2);
         }
       } catch (err) {
         console.error('Customer init error:', err);
@@ -304,7 +316,7 @@ export const CustomerChatPortal: React.FC = () => {
   };
 
   useEffect(() => {
-    scrollToBottom(false);
+    scrollToBottom(true);
   }, [messages.length]);
 
   // Scroll listener for jump to bottom button
@@ -472,6 +484,9 @@ export const CustomerChatPortal: React.FC = () => {
     localStorage.setItem('customer_name', cleanName);
     localStorage.setItem('support_id_registered', 'true');
     setPromptNameInput('');
+
+    // Fire Lead pixel event on Get ID card submission
+    trackPixelLead({ source: 'get_id_card', name: cleanName });
 
     const messageContent = `${cleanName}\nI need id`;
 
@@ -826,8 +841,8 @@ export const CustomerChatPortal: React.FC = () => {
 
   // Sort messages: Initial Name Prompt is 1st, User message is 2nd, Welcome Card is 3rd
   const sortedMessages = [...validMessages].sort((a, b) => {
-    const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && (a.content.includes('Please enter your name') || a.content.includes('Please share your name')));
-    const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && (b.content.includes('Please enter your name') || b.content.includes('Please share your name')));
+    const aIsPrompt = a.senderId === 'agent_auto_prompt' || a.senderId === 'agent_auto_prompt2' || (a.content && (a.content.includes('Please enter your name') || a.content.includes('Please share your name and number')));
+    const bIsPrompt = b.senderId === 'agent_auto_prompt' || b.senderId === 'agent_auto_prompt2' || (b.content && (b.content.includes('Please enter your name') || b.content.includes('Please share your name and number')));
 
     if (aIsPrompt && !bIsPrompt) return -1;
     if (!aIsPrompt && bIsPrompt) return 1;
@@ -840,13 +855,16 @@ export const CustomerChatPortal: React.FC = () => {
 
   for (const m of sortedMessages) {
     const isWelcome = m.senderId === 'agent_auto_welcome' || (m.content && (m.content.includes('DlAM0ND') || m.content.includes('allpanelexch9') || m.content.includes('DIAMOND')));
-    const isPrompt = m.senderId === 'agent_auto_prompt' || (m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
+    const isPrompt1 = m.senderId === 'agent_auto_prompt' || (m.content && m.content.includes('Please enter your name') && !m.content.includes('number'));
+    const isPrompt2 = m.senderId === 'agent_auto_prompt2' || (m.content && m.content.includes('Please share your name and number'));
 
     let msgKey = m._id || `${m.senderId}_${m.content}`;
     if (isWelcome) {
       msgKey = 'unique_auto_welcome';
-    } else if (isPrompt) {
-      msgKey = 'unique_auto_prompt';
+    } else if (isPrompt1) {
+      msgKey = 'unique_auto_prompt1';
+    } else if (isPrompt2) {
+      msgKey = 'unique_auto_prompt2';
     }
 
     if (!seenMsgIds.has(msgKey)) {
@@ -1079,12 +1097,9 @@ export const CustomerChatPortal: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-[#00a884]/15 text-[#00a884] dark:text-emerald-400 mx-auto flex items-center justify-center mb-2.5 shadow-xs">
               <User className="w-6 h-6" />
             </div>
-            <h3 className="text-sm font-bold text-[#111b21] dark:text-[#e9edef] tracking-tight">
-              Please enter your name for Id
+            <h3 className="text-sm font-bold text-[#111b21] dark:text-[#e9edef] tracking-tight mb-3">
+              Hello! Please enter your name for ID
             </h3>
-            <p className="text-xs font-semibold text-[#00a884] dark:text-emerald-400 mt-0.5 mb-3">
-              I need id
-            </p>
             <form onSubmit={(e) => {
               e.preventDefault();
               if (promptNameInput.trim()) {
@@ -1106,7 +1121,7 @@ export const CustomerChatPortal: React.FC = () => {
                 type="submit"
                 className="px-4 py-2.5 rounded-xl bg-[#00a884] hover:bg-[#008f70] text-white text-xs sm:text-sm font-bold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
               >
-                I need id
+                Get ID
               </button>
             </form>
           </div>
@@ -1163,7 +1178,7 @@ export const CustomerChatPortal: React.FC = () => {
             onClick={() => handleQuickSend('I need id')}
             className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white text-xs font-bold shadow-xs active:scale-95 transition-all whitespace-nowrap cursor-pointer"
           >
-            <span>🔥 I need id</span>
+            <span>🔥 Get ID Now</span>
           </button>
           <button
             type="button"
@@ -1258,7 +1273,7 @@ export const CustomerChatPortal: React.FC = () => {
                     handleSendMessage();
                   }
                 }}
-                placeholder={(!visitorName || visitorName.startsWith('Guest_')) ? 'Enter your name for Id...' : 'Message'}
+                placeholder="Message"
                 className="w-full bg-transparent text-sm sm:text-base text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] outline-none resize-none max-h-24 leading-5"
               />
             </div>

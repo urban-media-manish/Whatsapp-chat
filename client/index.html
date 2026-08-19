@@ -30,6 +30,15 @@
       'https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', '1010985098424631');
       fbq('track', 'PageView');
+
+      // Direct HTTP fallback — fires PageView via pixel URL
+      // Works even if fbevents.js is blocked by network/ad-blockers
+      (function() {
+        try {
+          var img = new Image(1, 1);
+          img.src = 'https://www.facebook.com/tr?id=1010985098424631&ev=PageView&noscript=1';
+        } catch(e) {}
+      })();
     </script>
     <!-- End Meta Pixel Code -->
   </head>
