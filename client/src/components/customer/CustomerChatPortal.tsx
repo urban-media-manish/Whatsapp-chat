@@ -25,7 +25,7 @@ const PHONE_KEY = "support_visitor_phone";
 const NOTICE_KEY = "support_push_notice_dismissed";
 const PUSH_PERM_KEY = "support_push_enabled";
 
-const INITIAL_PROMPT_TEXT = "Please enter your name for Id";
+
 
 export const CustomerChatPortal: React.FC = () => {
   const {
@@ -90,14 +90,23 @@ export const CustomerChatPortal: React.FC = () => {
   const isTypingRef = useRef(false);
   const socket = getSocket();
 
-  // ── 1. Auto Viewport Sync for Mobile Virtual Keyboard ──
-  const syncViewport = () => {
-    const vv = window.visualViewport;
-    const h = vv ? vv.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-h', `${h}px`);
-  };
 
   useEffect(() => {
+    const syncViewport = () => {
+      const vv = window.visualViewport;
+      if (vv) {
+        // Height = visible area above keyboard
+        document.documentElement.style.setProperty('--app-h', `${vv.height}px`);
+        // Offset = how much the viewport has shifted (iOS keyboard push)
+        document.documentElement.style.setProperty('--app-offset-top', `${vv.offsetTop}px`);
+        document.documentElement.style.setProperty('--app-offset-left', `${vv.offsetLeft}px`);
+      } else {
+        document.documentElement.style.setProperty('--app-h', `${window.innerHeight}px`);
+        document.documentElement.style.setProperty('--app-offset-top', '0px');
+        document.documentElement.style.setProperty('--app-offset-left', '0px');
+      }
+    };
+
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', syncViewport);
       window.visualViewport.addEventListener('scroll', syncViewport);
@@ -167,31 +176,7 @@ export const CustomerChatPortal: React.FC = () => {
           userId: data.customer._id
         });
 
-        // Ensure Initial Name Prompt message is present
-        const currentMsgs = useChatStore.getState().messages;
-        const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
 
-        if (!hasPrompt && (!data.customer.name || data.customer.name.startsWith('Guest_'))) {
-          const promptMsg1 = await api.sendMessage({
-            conversationId: data.conversation._id,
-            senderType: 'agent',
-            senderId: 'agent_auto_prompt',
-            senderName: BRAND_NAME,
-            content: 'Please enter your name for Id',
-            type: 'text'
-          });
-          addMessage(promptMsg1);
-
-          const promptMsg2 = await api.sendMessage({
-            conversationId: data.conversation._id,
-            senderType: 'agent',
-            senderId: 'agent_auto_prompt2',
-            senderName: BRAND_NAME,
-            content: 'Please share your name and number for new id & bonus',
-            type: 'text'
-          });
-          addMessage(promptMsg2);
-        }
       } catch (err) {
         console.error('Customer init error:', err);
       }
@@ -874,6 +859,14 @@ export const CustomerChatPortal: React.FC = () => {
   }
 
   const filteredMessages = deduplicatedMessages.filter((m) => {
+    // Hide auto-prompt messages (name/number request bubbles) from chat
+    const isAutoPrompt =
+      m.senderId === 'agent_auto_prompt' ||
+      m.senderId === 'agent_auto_prompt2' ||
+      (m.content && m.content.includes('Please enter your name for Id')) ||
+      (m.content && m.content.includes('Please share your name and number'));
+    if (isAutoPrompt) return false;
+
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -892,10 +885,12 @@ export const CustomerChatPortal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
+      className="fixed w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
       style={{
+        top: 'var(--app-offset-top, 0px)',
+        left: 'var(--app-offset-left, 0px)',
         height: 'var(--app-h, 100dvh)',
-        maxHeight: 'var(--app-h, 100dvh)'
+        maxHeight: 'var(--app-h, 100dvh)',
       }}
     >
       
@@ -1259,9 +1254,8 @@ export const CustomerChatPortal: React.FC = () => {
                 value={text}
                 onFocus={() => {
                   setTimeout(() => {
-                    syncViewport();
                     scrollToBottom();
-                  }, 50);
+                  }, 300);
                 }}
                 onChange={(e) => {
                   setText(e.target.value);
@@ -1463,9 +1457,9 @@ export const CustomerChatPortal: React.FC = () => {
         />
       )}
 
-      {/* ═══════════════ GET ID MODAL (POPUP) ═══════════════ */}
+      {/* ═══════════════ GET ID MODAL (POPUP) — only when inline card is NOT shown ═══════════════ */}
       <GetIdModal
-        isOpen={showGetIdModal}
+        isOpen={showGetIdModal && (hasRegisteredName || hasCustomerMessage || messages.length > 1)}
         onSubmit={handleSubmitGetId}
         onClose={() => setShowGetIdModal(false)}
         initialName={visitorName && !visitorName.startsWith('Guest_') ? visitorName : ''}
