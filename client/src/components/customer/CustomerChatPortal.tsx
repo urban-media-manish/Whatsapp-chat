@@ -9,7 +9,7 @@ import { GetIdModal } from '../chat/GetIdModal';
 import type { Message, MessageType } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsTxt, exportChatAsPdf } from '../../utils/exportChat';
-import { trackPixelLead, trackPixelEvent, trackPixelPageView } from '../../utils/pixel';
+import { trackPixelLead, trackPixelPageView } from '../../utils/pixel';
 import { installPwaApp } from '../../utils/pwa';
 import {
   X, Smile, Paperclip, Mic, Send,
