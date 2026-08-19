@@ -158,9 +158,35 @@ export const setupSocket = (io) => {
         }
 
         // Update DB status if changed
-        if (messageData._id && finalStatus !== messageData.status) {
+        if (messageData._id && !messageData._id.startsWith('temp_') && finalStatus !== messageData.status) {
           await Message.findByIdAndUpdate(messageData._id, { status: finalStatus });
           messageData.status = finalStatus;
+        }
+
+        // Keep Conversation and Customer state synced
+        if (messageData.conversation) {
+          const { Conversation } = await import('../models/Conversation.js');
+          const { Customer } = await import('../models/Customer.js');
+          const conv = await Conversation.findById(messageData.conversation);
+          if (conv) {
+            conv.lastMessage = {
+              content: messageData.content || messageData.fileName || `[${messageData.type || 'text'}]`,
+              senderType: messageData.senderType,
+              type: messageData.type || 'text',
+              timestamp: new Date()
+            };
+            conv.updatedAt = new Date();
+            if (messageData.senderType === 'customer' && finalStatus !== 'read') {
+              conv.unreadCount = (conv.unreadCount || 0) + 1;
+            }
+            await conv.save();
+
+            if (messageData.senderType === 'customer' && conv.customer) {
+              await Customer.findByIdAndUpdate(conv.customer, {
+                $set: { isGuest: false, lastSeen: new Date() }
+              });
+            }
+          }
         }
 
         // Broadcast message to everyone in conversation room except sender
@@ -171,6 +197,7 @@ export const setupSocket = (io) => {
 
         // Broadcast update to global agent workspace list
         io.to('agent_workspace_room').emit('conversation_activity', messageData);
+        io.to('agent_workspace_room').emit('new_conversation');
       } catch (err) {
         console.error('Error evaluating message tick status:', err);
         socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);

@@ -13,10 +13,12 @@ interface AuthState {
   setStatus: (status: 'online' | 'offline' | 'busy' | 'away') => Promise<void>;
 }
 
+const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('agent_token');
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  isAuthenticated: false,
-  isLoading: true,
+  isAuthenticated: hasStoredToken,
+  isLoading: hasStoredToken,
   error: null,
 
   login: async (email: string, pass: string) => {
@@ -48,9 +50,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const user = await api.getMe();
       set({ user, isAuthenticated: true, isLoading: false });
-    } catch (err) {
-      localStorage.removeItem('agent_token');
-      set({ user: null, isAuthenticated: false, isLoading: false });
+    } catch (err: any) {
+      const isUnauth = err?.message === 'Unauthorized' || err?.status === 401 || err?.status === 403;
+      if (isUnauth) {
+        localStorage.removeItem('agent_token');
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      } else {
+        // On temporary network retry, preserve auth state if token is present
+        set({ isLoading: false });
+      }
     }
   },
 

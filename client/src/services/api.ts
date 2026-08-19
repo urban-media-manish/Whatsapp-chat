@@ -131,6 +131,15 @@ export const api = {
     return res.json();
   },
 
+  clearChat: async (id: string): Promise<{ success: boolean; conversation: Conversation }> => {
+    const res = await fetch(`${API_BASE}/conversations/${id}/clear`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    if (!res.ok) throw new Error('Failed to clear chat');
+    return res.json();
+  },
+
   toggleCustomerBlockMute: async (id: string, payload: { blocked?: boolean; muted?: boolean }) => {
     const res = await fetch(`${API_BASE}/conversations/${id}/customer-actions`, {
       method: 'PUT',

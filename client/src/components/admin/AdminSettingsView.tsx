@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { Settings, Save, AlertCircle, Sparkles, CheckCircle } from 'lucide-react';
+import { Settings, Save, AlertCircle, Sparkles, CheckCircle, Smartphone, ArrowDown } from 'lucide-react';
+import { installPwaApp } from '../../utils/pwa';
 
 export const AdminSettingsView: React.FC = () => {
   const [welcomeMessage, setWelcomeMessage] = useState('');
@@ -42,6 +43,13 @@ export const AdminSettingsView: React.FC = () => {
     }
   };
 
+  const handleInstall = async () => {
+    const res = await installPwaApp();
+    if (res.message) {
+      alert(res.message);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#efeae2] dark:bg-[#0b141a] text-[#8696a0]">
@@ -58,6 +66,29 @@ export const AdminSettingsView: React.FC = () => {
           <Settings className="w-6 h-6 text-[#00a884]" /> Workspace Configuration
         </h1>
         <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-1 font-medium">Configure WhatsApp automation behaviors, greeting templates, and system policies</p>
+      </div>
+
+      {/* PWA Install Card for Admin */}
+      <div className="max-w-2xl bg-white/90 dark:bg-[#202c33]/90 backdrop-blur-2xl p-6 rounded-[24px] border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#00a884]/15 text-[#00a884] flex items-center justify-center shrink-0 shadow-xs">
+            <Smartphone className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-[#111b21] dark:text-[#e9edef]">Install Admin Web App</h2>
+            <p className="text-xs text-[#667781] dark:text-[#8696a0] mt-0.5">
+              Add Support Official workspace to your Home screen / Desktop for instant access and notifications.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleInstall}
+          className="bg-[#00a884] hover:bg-[#008f70] text-white font-semibold text-xs px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#00a884]/20 active:scale-95 cursor-pointer shrink-0"
+        >
+          <ArrowDown className="w-4 h-4" />
+          <span>Add to Home screen</span>
+        </button>
       </div>
 
       {/* Main Settings Card */}
@@ -113,7 +144,7 @@ export const AdminSettingsView: React.FC = () => {
           <button
             type="submit"
             disabled={isSaving}
-            className="bg-[#00a884] hover:bg-[#008f70] text-white font-semibold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#00a884]/20 active:scale-98 disabled:opacity-50"
+            className="bg-[#00a884] hover:bg-[#008f70] text-white font-semibold text-sm px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-[#00a884]/20 active:scale-98 disabled:opacity-50 cursor-pointer"
           >
             {isSaving ? (
               <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />

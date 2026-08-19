@@ -55,13 +55,18 @@
     margin: 0;
     padding: 0;
     height: 100%;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
     width: 100%;
     overscroll-behavior: none;
     overflow: hidden;
+    -webkit-text-size-adjust: 100%;
   }
 
   #root {
     height: 100%;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
     width: 100%;
     overflow: hidden;
   }
@@ -74,6 +79,21 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Prevent iOS Safari 16px auto-zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  @media (min-width: 640px) {
+    input, textarea, select {
+      font-size: 14px !important;
+    }
   }
 }
 

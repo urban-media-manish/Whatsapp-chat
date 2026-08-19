@@ -10,11 +10,12 @@ import type { Message, MessageType } from '../../types';
 import { sounds } from '../../utils/audio';
 import { exportChatAsTxt, exportChatAsPdf } from '../../utils/exportChat';
 import { trackPixelLead } from '../../utils/pixel';
+import { installPwaApp } from '../../utils/pwa';
 import {
   X, Smile, Paperclip, Mic, Send,
   Bell, MoreVertical, Moon, Sun, Download, FileText,
   Image as ImageIcon, Camera, File, Music, ArrowDown,
-  Trash2, Phone, Search, ChevronLeft, Smartphone
+  Trash2, Phone, Search, ChevronLeft, Smartphone, User
 } from 'lucide-react';
 
 const BRAND_NAME = "Support Official";
@@ -23,6 +24,8 @@ const NAME_KEY = "support_visitor_name";
 const PHONE_KEY = "support_visitor_phone";
 const NOTICE_KEY = "support_push_notice_dismissed";
 const PUSH_PERM_KEY = "support_push_enabled";
+
+const INITIAL_PROMPT_TEXT = "Please enter your name for Id";
 
 export const CustomerChatPortal: React.FC = () => {
   const {
@@ -54,6 +57,7 @@ export const CustomerChatPortal: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showVoiceCall, setShowVoiceCall] = useState(false);
   const [showGetIdModal, setShowGetIdModal] = useState(false);
+  const [promptNameInput, setPromptNameInput] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -61,6 +65,9 @@ export const CustomerChatPortal: React.FC = () => {
   // Connection & Presence state
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'reconnecting' | 'disconnected'>('connecting');
   const [isAgentOnline, setIsAgentOnline] = useState(false);
+
+  // Session Init Promise Ref
+  const initPromiseRef = useRef<Promise<any> | null>(null);
 
   // PWA install prompt ref
   const deferredPromptRef = useRef<any>(null);
@@ -87,10 +94,7 @@ export const CustomerChatPortal: React.FC = () => {
   const syncViewport = () => {
     const vv = window.visualViewport;
     const h = vv ? vv.height : window.innerHeight;
-    const top = vv ? vv.offsetTop : 0;
     document.documentElement.style.setProperty('--app-h', `${h}px`);
-    document.documentElement.style.setProperty('--app-top', `${top}px`);
-    window.scrollTo(0, 0);
   };
 
   useEffect(() => {
@@ -125,12 +129,15 @@ export const CustomerChatPortal: React.FC = () => {
 
     const init = async () => {
       try {
-        const data = await api.initCustomer({
+        const dataPromise = api.initCustomer({
           sessionId: savedSessionId || undefined,
           name: storedName || undefined,
           phone: storedPhone || undefined,
           isGuest: !storedName
         });
+        initPromiseRef.current = dataPromise;
+
+        const data = await dataPromise;
 
         localStorage.setItem(SESSION_KEY, data.customer.sessionId);
         localStorage.setItem('customer_session_id', data.customer.sessionId);
@@ -158,36 +165,17 @@ export const CustomerChatPortal: React.FC = () => {
           userId: data.customer._id
         });
 
-        // 1. Ensure 1st Welcome message is present
+        // Ensure Initial Name Prompt message is present
         const currentMsgs = useChatStore.getState().messages;
-        const hasWelcome = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('DlAM0ND') || m.content.includes('allpanelexch9.game')));
+        const hasPrompt = currentMsgs && currentMsgs.some((m) => m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
 
-        const welcomeText = `💎 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 DlAM0ND 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 💎\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐌𝐄𝐓𝐀 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 ✅ 𝐄𝐗𝐂𝐇𝐀𝐍𝐆𝐄 𝐁𝐑𝐀𝐍𝐃\n━━━━━━━━━━━━━━━\nAvailable site\n\nhttps://allpanelexch9.game\n━━━━━━━━━━━━━━━\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 🆔 @ 𝟐𝟎𝟎\n𝐌𝐢𝐧𝐢𝐦𝐮𝐦 𝐁€T@ 𝟏𝟎𝟎\n𝐂𝐫𝐞𝐚𝐭𝐞 𝐘𝐨𝐮𝐫 🆔𝐓𝐡𝐫𝐨𝐮𝐠𝐡 𝐔𝐬 & 𝐆𝐞𝐭 𝟓% 𝐁0𝐍𝐔𝐒\n⚡ 𝐅𝐚𝐬𝐭 𝐃𝐞-𝐩𝐨𝐬𝐢𝐭 & 𝐖𝐢𝐭𝐡-𝐝𝐫𝐚𝐰𝐚𝐥\n🔒 𝐒𝐞𝐜𝐮𝐫𝐞 & 𝐓𝐫𝐮𝐬𝐭-𝐞𝐝 𝐏𝐥𝐚𝐭𝐟𝐨𝐫𝐦\n𝟐𝟒𝐱𝟕 𝐂𝐮𝐬𝐭𝐨𝐦𝐞𝐫 𝐒𝐮𝐩𝐩𝐨𝐫𝐭\n━━━━━━━━━━━━━━━\n𝐈𝐍𝐃𝐈𝐀’𝐒 𝐅𝐈𝐑𝐒𝐓 𝐅𝐑𝐄𝐄 𝐏𝐑𝐄𝐃𝐈𝐂𝐓 & 𝐖𝐈𝐍 𝐒𝐈𝐓𝐄\n\nNote :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
-
-        if (!hasWelcome) {
-          const welcomeMsg = await api.sendMessage({
-            conversationId: data.conversation._id,
-            senderType: 'agent',
-            senderId: 'agent_auto_welcome',
-            senderName: BRAND_NAME,
-            content: welcomeText,
-            type: 'text'
-          });
-          addMessage(welcomeMsg);
-        }
-
-        // 2. Ensure 2nd Follow-up prompt message is present
-        const afterWelcomeMsgs = useChatStore.getState().messages;
-        const hasPrompt = afterWelcomeMsgs && afterWelcomeMsgs.some((m) => m.content && (m.content.includes('Please share your name and number') || m.content.includes('apni ID create karne')));
-
-        if (!hasPrompt) {
-          const promptText = "Please share your name and number for new id & bonus";
+        if (!hasPrompt && (!data.customer.name || data.customer.name.startsWith('Guest_'))) {
           const promptMsg = await api.sendMessage({
             conversationId: data.conversation._id,
             senderType: 'agent',
             senderId: 'agent_auto_prompt',
             senderName: BRAND_NAME,
-            content: promptText,
+            content: INITIAL_PROMPT_TEXT,
             type: 'text'
           });
           addMessage(promptMsg);
@@ -364,9 +352,25 @@ export const CustomerChatPortal: React.FC = () => {
   // ── 6. Send Text Message (Instant 0ms) ──
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!text.trim() || !customerConversation || !customerSession) return;
+    if (!text.trim()) return;
 
-    const content = text.trim();
+    let content = text.trim();
+    let currentName = visitorName;
+
+    // Requirement 4: If visitor name not yet registered or guest, register name and ensure "I need id" is attached
+    if (!currentName || currentName.startsWith('Guest_') || localStorage.getItem('support_id_registered') !== 'true') {
+      const parsedName = content.split('\n')[0].replace(/i need id/gi, '').trim() || content;
+      currentName = parsedName;
+      setVisitorName(parsedName);
+      localStorage.setItem(NAME_KEY, parsedName);
+      localStorage.setItem('customer_name', parsedName);
+      localStorage.setItem('support_id_registered', 'true');
+
+      if (!content.toLowerCase().includes('i need id')) {
+        content = `${content}\nI need id`;
+      }
+    }
+
     setText('');
     handleTypingStop();
 
@@ -375,14 +379,48 @@ export const CustomerChatPortal: React.FC = () => {
       textareaRef.current.style.height = 'auto';
     }
 
+    // Ensure session is ready (await initPromiseRef so first click is never dropped)
+    let conv = customerConversation;
+    let sess = customerSession;
+
+    if (!conv || !sess) {
+      if (initPromiseRef.current) {
+        try {
+          const initData = await initPromiseRef.current;
+          conv = initData.conversation;
+          sess = initData.customer;
+        } catch (err) {
+          console.error('Init wait error in sendMessage:', err);
+        }
+      }
+    }
+
+    if (!conv || !sess) {
+      try {
+        const savedSessionId = localStorage.getItem(SESSION_KEY) || localStorage.getItem('customer_session_id');
+        const initData = await api.initCustomer({
+          sessionId: savedSessionId || undefined,
+          name: currentName || undefined,
+          isGuest: false
+        });
+        conv = initData.conversation;
+        sess = initData.customer;
+        setCustomerSession(sess, conv);
+      } catch (err) {
+        console.error('Direct init error in sendMessage:', err);
+      }
+    }
+
+    if (!conv || !sess) return;
+
     // 1. Instant Optimistic Render (<1ms)
     const tempId = 'temp_' + Date.now() + Math.random().toString(36).substring(2, 6);
     const optimisticMsg: Message = {
       _id: tempId,
-      conversation: customerConversation._id,
+      conversation: conv._id,
       senderType: 'customer',
-      senderId: customerSession._id,
-      senderName: visitorName || customerSession.name || 'Visitor',
+      senderId: sess._id,
+      senderName: currentName || sess.name || 'Visitor',
       content,
       type: 'text',
       status: 'sent',
@@ -398,11 +436,21 @@ export const CustomerChatPortal: React.FC = () => {
 
     // 3. Background DB Save
     try {
+      if (currentName && (!sess.name || sess.name.startsWith('Guest_'))) {
+        api.initCustomer({
+          sessionId: sess.sessionId,
+          name: currentName,
+          isGuest: false
+        }).then((res) => {
+          setCustomerSession(res.customer, res.conversation);
+        }).catch((err) => console.error('Error updating customer name:', err));
+      }
+
       const serverMsg = await api.sendMessage({
-        conversationId: customerConversation._id,
+        conversationId: conv._id,
         senderType: 'customer',
-        senderId: customerSession._id,
-        senderName: visitorName || customerSession.name || 'Visitor',
+        senderId: sess._id,
+        senderName: currentName || sess.name || 'Visitor',
         content,
         type: 'text'
       });
@@ -413,11 +461,103 @@ export const CustomerChatPortal: React.FC = () => {
     }
   };
 
-  // ── 6b. Quick Action Handler (Instant 0ms) ──
+  // ── 6b. Name Prompt Submission Handler (Instant 0ms, Zero Drops) ──
+  const handleNameSubmit = async (enteredName: string) => {
+    if (!enteredName || !enteredName.trim()) return;
+    const cleanName = enteredName.trim();
+
+    // 1. Immediately update state so card vanishes 0ms instantly and input updates
+    setVisitorName(cleanName);
+    localStorage.setItem(NAME_KEY, cleanName);
+    localStorage.setItem('customer_name', cleanName);
+    localStorage.setItem('support_id_registered', 'true');
+    setPromptNameInput('');
+
+    const messageContent = `${cleanName}\nI need id`;
+
+    // 2. Ensure session is ready (await initPromiseRef so first click is never dropped)
+    let conv = customerConversation;
+    let sess = customerSession;
+
+    if (!conv || !sess) {
+      if (initPromiseRef.current) {
+        try {
+          const initData = await initPromiseRef.current;
+          conv = initData.conversation;
+          sess = initData.customer;
+        } catch (err) {
+          console.error('Init wait error in handleNameSubmit:', err);
+        }
+      }
+    }
+
+    if (!conv || !sess) {
+      try {
+        const savedSessionId = localStorage.getItem(SESSION_KEY) || localStorage.getItem('customer_session_id');
+        const initData = await api.initCustomer({
+          sessionId: savedSessionId || undefined,
+          name: cleanName,
+          isGuest: false
+        });
+        conv = initData.conversation;
+        sess = initData.customer;
+        setCustomerSession(sess, conv);
+      } catch (err) {
+        console.error('Direct init error in handleNameSubmit:', err);
+      }
+    }
+
+    if (!conv || !sess) return;
+
+    // 3. Instant Optimistic Render (<1ms)
+    const tempId = 'temp_' + Date.now() + Math.random().toString(36).substring(2, 6);
+    const optimisticMsg: Message = {
+      _id: tempId,
+      conversation: conv._id,
+      senderType: 'customer',
+      senderId: sess._id,
+      senderName: cleanName,
+      content: messageContent,
+      type: 'text',
+      status: 'sent',
+      createdAt: new Date().toISOString()
+    };
+
+    addMessage(optimisticMsg);
+    sounds.playSent();
+    scrollToBottom();
+
+    socket.emit('send_message', optimisticMsg);
+
+    try {
+      api.initCustomer({
+        sessionId: sess.sessionId,
+        name: cleanName,
+        isGuest: false
+      }).then((res) => {
+        setCustomerSession(res.customer, res.conversation);
+      }).catch((err) => console.error('Error updating customer name:', err));
+
+      const serverMsg = await api.sendMessage({
+        conversationId: conv._id,
+        senderType: 'customer',
+        senderId: sess._id,
+        senderName: cleanName,
+        content: messageContent,
+        type: 'text'
+      });
+
+      addMessage(serverMsg);
+    } catch (err) {
+      console.error('Name submit error:', err);
+    }
+  };
+
+  // ── 6c. Quick Action Handler (Instant 0ms) ──
   const handleQuickSend = async (quickText: string) => {
-    if (quickText.includes('Get ID')) {
+    if (quickText.includes('Get ID') || quickText.includes('I need id')) {
       trackPixelLead({ source: 'quick_action_get_id' });
-      if (!visitorName || !visitorPhone || localStorage.getItem('support_id_registered') !== 'true') {
+      if (!visitorName || visitorName.startsWith('Guest_') || !visitorPhone || localStorage.getItem('support_id_registered') !== 'true') {
         setShowGetIdModal(true);
         return;
       }
@@ -460,7 +600,7 @@ export const CustomerChatPortal: React.FC = () => {
     }
   };
 
-  // ── 6c. Get ID Modal Submission ──
+  // ── 6d. Get ID Modal Submission ──
   const handleSubmitGetId = async (submittedName: string, submittedPhone: string) => {
     trackPixelLead({
       source: 'get_id_modal_submit',
@@ -490,13 +630,13 @@ export const CustomerChatPortal: React.FC = () => {
       setCustomerSession(data.customer, data.conversation);
       setShowGetIdModal(false);
 
-      // Automatically send the ID request message into chat
-      await handleQuickSend(`🔥 I want to Get New ID!\n👤 Name: ${submittedName}\n📱 WhatsApp: ${submittedPhone}`);
+      // Automatically send the ID request message into chat with "I need id"
+      await handleQuickSend(`${submittedName}\nI need id\n📱 WhatsApp: ${submittedPhone}`);
       showToast('ID Request Sent!');
     } catch (err) {
       console.error('Error submitting ID:', err);
       setShowGetIdModal(false);
-      await handleQuickSend(`🔥 I want to Get New ID!\n👤 Name: ${submittedName}\n📱 WhatsApp: ${submittedPhone}`);
+      await handleQuickSend(`${submittedName}\nI need id\n📱 WhatsApp: ${submittedPhone}`);
     }
   };
 
@@ -578,14 +718,33 @@ export const CustomerChatPortal: React.FC = () => {
   };
 
   // ── 8. File Upload Handler ──
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fileType: MessageType) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, _hintType?: MessageType | 'auto') => {
     const file = e.target.files?.[0];
     if (!file || !customerConversation || !customerSession) return;
     setShowAttachSheet(false);
 
     try {
-      showToast('Uploading file…');
+      showToast('Uploading…');
       const uploadRes = await api.uploadFile(file);
+
+      // Accurately resolve file type: images are always 'image', never 'document'
+      let resolvedType: MessageType = 'document';
+      const mime = (file.type || uploadRes.mimeType || '').toLowerCase();
+      const ext = (file.name || '').toLowerCase();
+      const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.heic', '.heif', '.avif', '.ico'];
+      const videoExts = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'];
+      const audioExts = ['.mp3', '.wav', '.ogg', '.m4a', '.aac'];
+
+      if (mime.startsWith('image/') || imageExts.some(e => ext.endsWith(e)) || uploadRes.type === 'image') {
+        resolvedType = 'image';
+      } else if (mime.startsWith('video/') || videoExts.some(e => ext.endsWith(e)) || uploadRes.type === 'video') {
+        resolvedType = 'video';
+      } else if (mime.startsWith('audio/') || audioExts.some(e => ext.endsWith(e)) || uploadRes.type === 'audio') {
+        resolvedType = 'audio';
+      } else if (mime === 'application/pdf' || ext.endsWith('.pdf') || uploadRes.type === 'pdf') {
+        resolvedType = 'pdf';
+      }
+
       const newMsg = await api.sendMessage({
         conversationId: customerConversation._id,
         senderType: 'customer',
@@ -595,7 +754,7 @@ export const CustomerChatPortal: React.FC = () => {
         fileUrl: uploadRes.fileUrl,
         fileName: file.name,
         fileSize: file.size,
-        type: fileType
+        type: resolvedType
       });
       addMessage(newMsg);
       sounds.playSent();
@@ -611,30 +770,9 @@ export const CustomerChatPortal: React.FC = () => {
   // ── 9. Menu & Settings Handlers ──
   const handleInstallPwa = async () => {
     setShowMenu(false);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    if (isStandalone) {
-      showToast('App is already installed on your device!');
-      return;
-    }
-
-    if (deferredPromptRef.current) {
-      try {
-        await deferredPromptRef.current.prompt();
-        const choiceResult = await deferredPromptRef.current.userChoice;
-        if (choiceResult?.outcome === 'accepted') {
-          showToast('App installed to Home screen!');
-        }
-        deferredPromptRef.current = null;
-      } catch (err) {
-        console.error('Install prompt error:', err);
-      }
-    } else {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      if (isIOS) {
-        showToast("Tap Safari Share button (⎕↑) → 'Add to Home Screen'");
-      } else {
-        showToast("Tap browser menu (⋮ / Share) → 'Add to Home screen'");
-      }
+    const res = await installPwaApp();
+    if (res.message) {
+      showToast(res.message);
     }
   };
 
@@ -686,40 +824,34 @@ export const CustomerChatPortal: React.FC = () => {
     return true;
   });
 
-  // Sort messages: Guarantee Welcome Card is 1st and Prompt is 2nd
+  // Sort messages: Initial Name Prompt is 1st, User message is 2nd, Welcome Card is 3rd
   const sortedMessages = [...validMessages].sort((a, b) => {
-    const aIsWelcome = a.senderId === 'agent_auto_welcome' || (a.content && a.content.includes('DlAM0ND'));
-    const bIsWelcome = b.senderId === 'agent_auto_welcome' || (b.content && b.content.includes('DlAM0ND'));
-    const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && a.content.includes('Please share your name'));
-    const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && b.content.includes('Please share your name'));
+    const aIsPrompt = a.senderId === 'agent_auto_prompt' || (a.content && (a.content.includes('Please enter your name') || a.content.includes('Please share your name')));
+    const bIsPrompt = b.senderId === 'agent_auto_prompt' || (b.content && (b.content.includes('Please enter your name') || b.content.includes('Please share your name')));
 
-    if (aIsWelcome && bIsPrompt) return -1;
-    if (bIsWelcome && aIsPrompt) return 1;
+    if (aIsPrompt && !bIsPrompt) return -1;
+    if (!aIsPrompt && bIsPrompt) return 1;
 
     return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
   });
 
   const deduplicatedMessages: Message[] = [];
-  const seenWelcomeKeys = new Set<string>();
-  const seenPromptKeys = new Set<string>();
+  const seenMsgIds = new Set<string>();
 
   for (const m of sortedMessages) {
-    if (m.senderId === 'agent_auto_welcome' || (m.content && m.content.includes('DlAM0ND'))) {
-      const key = (m.content || '').trim();
-      if (!seenWelcomeKeys.has(key)) {
-        seenWelcomeKeys.add(key);
-        deduplicatedMessages.push(m);
-      }
-    } else if (m.senderId === 'agent_auto_prompt' || (m.content && m.content.includes('Please share your name'))) {
-      const key = (m.content || '').trim();
-      if (!seenPromptKeys.has(key)) {
-        seenPromptKeys.add(key);
-        deduplicatedMessages.push(m);
-      }
-    } else {
-      if (!deduplicatedMessages.some((existing) => existing._id === m._id)) {
-        deduplicatedMessages.push(m);
-      }
+    const isWelcome = m.senderId === 'agent_auto_welcome' || (m.content && (m.content.includes('DlAM0ND') || m.content.includes('allpanelexch9') || m.content.includes('DIAMOND')));
+    const isPrompt = m.senderId === 'agent_auto_prompt' || (m.content && (m.content.includes('Please enter your name') || m.content.includes('Please share your name')));
+
+    let msgKey = m._id || `${m.senderId}_${m.content}`;
+    if (isWelcome) {
+      msgKey = 'unique_auto_welcome';
+    } else if (isPrompt) {
+      msgKey = 'unique_auto_prompt';
+    }
+
+    if (!seenMsgIds.has(msgKey)) {
+      seenMsgIds.add(msgKey);
+      deduplicatedMessages.push(m);
     }
   }
 
@@ -733,18 +865,24 @@ export const CustomerChatPortal: React.FC = () => {
     );
   });
 
+  const hasCustomerMessage = messages.some((m) => m.senderType === 'customer');
+  const hasRegisteredName = Boolean(
+    (visitorName && !visitorName.startsWith('Guest_')) ||
+    localStorage.getItem('support_id_registered') === 'true' ||
+    hasCustomerMessage
+  );
+
   return (
     <div
-      className="fixed left-0 right-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
+      className="fixed inset-0 w-full flex flex-col bg-[#efeae2] dark:bg-[#0b141a] select-none overflow-hidden"
       style={{
-        top: 'var(--app-top, 0px)',
         height: 'var(--app-h, 100dvh)',
         maxHeight: 'var(--app-h, 100dvh)'
       }}
     >
       
       {/* ═══════════════ HEADER ═══════════════ */}
-      <header className="h-[56px] px-3 bg-[#075e54] dark:bg-[#1f2c33] text-white flex items-center justify-between z-30 shadow-sm shrink-0">
+      <header className="px-3 bg-[#075e54] dark:bg-[#1f2c33] text-white flex items-center justify-between z-30 shadow-sm shrink-0 pt-[env(safe-area-inset-top,0px)] h-[calc(56px+env(safe-area-inset-top,0px))]">
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative w-[40px] h-[40px] rounded-full overflow-hidden shrink-0 shadow-md border-2 border-white/30 bg-emerald-700 flex items-center justify-center">
             <img
@@ -935,24 +1073,42 @@ export const CustomerChatPortal: React.FC = () => {
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto p-3 md:px-6 space-y-2 chat-wallpaper relative"
       >
-        {/* Empty State */}
-        {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 text-[#00a884] dark:text-emerald-400 flex items-center justify-center mb-3 shadow-sm">
-              <Smile className="w-8 h-8" />
+        {/* In-chat Interactive Name for ID Card (Shown ONLY to new visitor who hasn't added name yet) */}
+        {!hasRegisteredName && !hasCustomerMessage && messages.length <= 1 && (
+          <div className="mx-auto max-w-sm my-3 p-4 rounded-2xl bg-white/95 dark:bg-[#202c33]/95 shadow-lg border border-[#00a884]/40 text-center animate-in fade-in zoom-in-95 backdrop-blur-md">
+            <div className="w-12 h-12 rounded-full bg-[#00a884]/15 text-[#00a884] dark:text-emerald-400 mx-auto flex items-center justify-center mb-2.5 shadow-xs">
+              <User className="w-6 h-6" />
             </div>
-            <h2 className="text-lg font-bold text-[#111b21] dark:text-[#e9edef] mb-1">
-              Welcome to Support Official
-            </h2>
-            <p className="text-xs text-[#667781] dark:text-[#8696a0] leading-relaxed mb-4">
-              Click below to instantly get your ID and 24/7 customer support.
+            <h3 className="text-sm font-bold text-[#111b21] dark:text-[#e9edef] tracking-tight">
+              Please enter your name for Id
+            </h3>
+            <p className="text-xs font-semibold text-[#00a884] dark:text-emerald-400 mt-0.5 mb-3">
+              I need id
             </p>
-            <button
-              onClick={() => handleQuickSend('Get ID Now')}
-              className="px-6 py-2.5 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white text-sm font-bold shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center gap-2"
-            >
-              <span>🔥 Get ID Now</span>
-            </button>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (promptNameInput.trim()) {
+                const name = promptNameInput.trim();
+                handleNameSubmit(name);
+              }
+            }} className="flex gap-2">
+              <input
+                name="promptName"
+                type="text"
+                value={promptNameInput}
+                onChange={(e) => setPromptNameInput(e.target.value)}
+                required
+                placeholder="Enter your name..."
+                className="flex-1 px-3.5 py-2.5 text-xs sm:text-sm bg-[#f0f2f5] dark:bg-[#111b21] rounded-xl outline-none border border-black/10 dark:border-white/10 focus:border-[#00a884] text-[#111b21] dark:text-[#e9edef] font-normal"
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-[#00a884] hover:bg-[#008f70] text-white text-xs sm:text-sm font-bold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+              >
+                I need id
+              </button>
+            </form>
           </div>
         )}
 
@@ -986,7 +1142,7 @@ export const CustomerChatPortal: React.FC = () => {
       {showScrollDown && (
         <button
           onClick={() => scrollToBottom(true)}
-          className="absolute bottom-24 right-4 w-10 h-10 rounded-full bg-white dark:bg-[#202c33] text-[#667781] dark:text-[#8696a0] shadow-lg flex items-center justify-center z-20 border border-black/[0.08] dark:border-white/[0.08] transition-all hover:scale-105 active:scale-95"
+          className="absolute bottom-24 right-4 w-10 h-10 rounded-full bg-white dark:bg-[#202c33] text-[#667781] dark:text-[#8696a0] shadow-lg flex items-center justify-center z-20 border border-black/[0.08] dark:border-white/[0.08] transition-all hover:scale-105 active:scale-95 cursor-pointer"
           aria-label="Scroll to bottom"
         >
           <ArrowDown className="w-4 h-4" />
@@ -999,34 +1155,34 @@ export const CustomerChatPortal: React.FC = () => {
       )}
 
       {/* ═══════════════ COMPOSER & INPUT BAR ═══════════════ */}
-      <footer className="bg-[#f0f2f5] dark:bg-[#202c33] px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] border-t border-black/[0.06] dark:border-white/[0.08] z-30 shrink-0">
+      <footer className="bg-[#f0f2f5] dark:bg-[#202c33] px-2 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom,0px))] pl-[max(0.5rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] border-t border-black/[0.06] dark:border-white/[0.08] z-30 shrink-0">
         {/* Quick Action Chips */}
         <div className="px-1 pb-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             type="button"
-            onClick={() => handleQuickSend('Get ID Now')}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white text-xs font-bold shadow-xs active:scale-95 transition-all whitespace-nowrap"
+            onClick={() => handleQuickSend('I need id')}
+            className="flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white text-xs font-bold shadow-xs active:scale-95 transition-all whitespace-nowrap cursor-pointer"
           >
-            <span>🔥 Get ID Now</span>
+            <span>🔥 I need id</span>
           </button>
           <button
             type="button"
             onClick={() => handleQuickSend('Deposit')}
-            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap"
+            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap cursor-pointer"
           >
             <span>⚡ Deposit</span>
           </button>
           <button
             type="button"
             onClick={() => handleQuickSend('Withdrawal')}
-            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap"
+            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap cursor-pointer"
           >
             <span>💸 Withdrawal</span>
           </button>
           <button
             type="button"
             onClick={() => handleQuickSend('Customer Support')}
-            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap"
+            className="flex items-center gap-1 px-3 py-1 rounded-full bg-white dark:bg-[#2a3942] hover:bg-[#e9edef] dark:hover:bg-[#32444d] text-[#111b21] dark:text-[#e9edef] text-xs font-medium border border-black/[0.06] dark:border-white/[0.08] shadow-xs active:scale-95 transition-all whitespace-nowrap cursor-pointer"
           >
             <span>💬 Support</span>
           </button>
@@ -1037,7 +1193,7 @@ export const CustomerChatPortal: React.FC = () => {
           <div className="flex items-center gap-3 px-2 py-1 bg-white dark:bg-[#111b21] rounded-2xl border border-black/[0.06] dark:border-white/[0.08] shadow-sm animate-pop">
             <button
               onClick={cancelVoiceRecording}
-              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors"
+              className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors cursor-pointer"
               title="Cancel recording"
             >
               <Trash2 className="w-5 h-5" />
@@ -1051,7 +1207,7 @@ export const CustomerChatPortal: React.FC = () => {
             </span>
             <button
               onClick={stopAndSendVoiceRecording}
-              className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all"
+              className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all cursor-pointer"
               title="Send audio"
             >
               <Send className="w-4 h-4" />
@@ -1063,7 +1219,7 @@ export const CustomerChatPortal: React.FC = () => {
             {/* Emoji Button */}
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className={`p-2 rounded-full transition-colors ${
+              className={`p-2 rounded-full transition-colors cursor-pointer ${
                 showEmojiPicker ? 'text-[#00a884] bg-emerald-50 dark:bg-emerald-950/30' : 'text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white'
               }`}
               title="Emoji"
@@ -1074,7 +1230,7 @@ export const CustomerChatPortal: React.FC = () => {
             {/* Attachments Sheet Trigger */}
             <button
               onClick={() => setShowAttachSheet(true)}
-              className="p-2 text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white rounded-full transition-colors"
+              className="p-2 text-[#667781] dark:text-[#8696a0] hover:text-[#111b21] dark:hover:text-white rounded-full transition-colors cursor-pointer"
               title="Attach"
             >
               <Paperclip className="w-5 h-5 -rotate-45" />
@@ -1102,8 +1258,8 @@ export const CustomerChatPortal: React.FC = () => {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Message"
-                className="w-full bg-transparent text-sm text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] outline-none resize-none max-h-24 leading-5"
+                placeholder={(!visitorName || visitorName.startsWith('Guest_')) ? 'Enter your name for Id...' : 'Message'}
+                className="w-full bg-transparent text-sm sm:text-base text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] outline-none resize-none max-h-24 leading-5"
               />
             </div>
 
@@ -1111,7 +1267,7 @@ export const CustomerChatPortal: React.FC = () => {
             {text.trim() ? (
               <button
                 onClick={() => handleSendMessage()}
-                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0"
+                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
                 title="Send message"
               >
                 <Send className="w-4 h-4 ml-0.5" />
@@ -1119,7 +1275,7 @@ export const CustomerChatPortal: React.FC = () => {
             ) : (
               <button
                 onClick={startVoiceRecording}
-                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0"
+                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#008f70] text-white flex items-center justify-center shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
                 title="Record voice message"
               >
                 <Mic className="w-5 h-5" />
@@ -1134,7 +1290,7 @@ export const CustomerChatPortal: React.FC = () => {
         ref={fileInputRef}
         type="file"
         hidden
-        onChange={(e) => handleFileUpload(e, 'document')}
+        onChange={(e) => handleFileUpload(e, 'auto')}
       />
       <input
         ref={cameraInputRef}

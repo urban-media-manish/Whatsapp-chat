@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useChatStore } from '../../store/useChatStore';
 import { api } from '../../services/api';
 import type { Note } from '../../types';
-import { Tag, Plus, StickyNote, Sparkles, X } from 'lucide-react';
+import { Tag, Plus, StickyNote, Sparkles, X, Trash2, Eraser, AlertTriangle } from 'lucide-react';
 
 interface CustomerContextSidebarProps {
   onClose?: () => void;
@@ -234,6 +234,37 @@ export const CustomerContextSidebar: React.FC<CustomerContextSidebarProps> = ({ 
                 <p className="text-xs text-[#111b21] dark:text-[#e9edef] whitespace-pre-wrap">{n.content}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Danger Zone Actions */}
+        <div className="border-t border-black/[0.06] dark:border-white/[0.08] pt-4 mt-2">
+          <span className="text-[11px] font-bold text-red-500 uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
+            <AlertTriangle className="w-3.5 h-3.5" /> Danger Actions
+          </span>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Clear all messages history with ${activeConversation.customer?.name || 'this customer'}?`)) {
+                  useChatStore.getState().clearChat(activeConversation._id);
+                }
+              }}
+              className="w-full py-2 px-3 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            >
+              <Eraser className="w-3.5 h-3.5" /> Clear Messages History
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Delete entire chat with ${activeConversation.customer?.name || 'this customer'}? This action cannot be undone.`)) {
+                  useChatStore.getState().deleteConversation(activeConversation._id);
+                }
+              }}
+              className="w-full py-2 px-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow-sm shadow-red-500/20 flex items-center justify-center gap-2 transition-colors cursor-pointer active:scale-98"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Entire Conversation
+            </button>
           </div>
         </div>
       </div>

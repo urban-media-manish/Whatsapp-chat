@@ -95,34 +95,27 @@ https://allpanelexch9.game
 
 Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
 
+    const namePromptMessage = 'Please enter your name for Id';
+
     if (!conversation) {
       conversation = await Conversation.create({
         customer: customer._id,
         status: 'open',
         priority: 'medium',
         lastMessage: {
-          content: welcomeMessage,
+          content: namePromptMessage,
           senderType: 'agent',
           timestamp: new Date()
         }
       });
 
-      // Send initial welcome message
-      await Message.create({
-        conversation: conversation._id,
-        senderType: 'agent',
-        senderId: 'agent_auto_welcome',
-        senderName: 'Support Official',
-        content: welcomeMessage
-      });
-
-      // Send follow up prompt asking for name and WhatsApp number
+      // Send initial prompt asking for name for ID
       await Message.create({
         conversation: conversation._id,
         senderType: 'agent',
         senderId: 'agent_auto_prompt',
         senderName: 'Support Official',
-        content: 'Please share your name and number for new id & bonus'
+        content: namePromptMessage
       });
 
       conversation = await Conversation.findById(conversation._id)
@@ -132,22 +125,15 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
         req.io.to('agent_workspace_room').emit('new_conversation', conversation);
       }
     } else {
-      // If conversation exists, check if it has any welcome message
+      // If conversation exists with 0 messages, ensure initial prompt is present
       const msgCount = await Message.countDocuments({ conversation: conversation._id });
       if (msgCount === 0) {
         await Message.create({
           conversation: conversation._id,
           senderType: 'agent',
-          senderId: 'agent_auto_welcome',
-          senderName: 'Support Official',
-          content: welcomeMessage
-        });
-        await Message.create({
-          conversation: conversation._id,
-          senderType: 'agent',
           senderId: 'agent_auto_prompt',
           senderName: 'Support Official',
-          content: 'Please share your name and number for new id & bonus'
+          content: namePromptMessage
         });
       }
     }
