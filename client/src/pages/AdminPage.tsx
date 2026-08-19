@@ -174,7 +174,7 @@ export const AdminPage: React.FC = () => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="h-[100dvh] w-full flex bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-300 font-sans">
+    <div className="h-full w-full flex bg-[#f5f5f7] dark:bg-[#000000] overflow-hidden select-none transition-colors duration-300 font-sans">
       <AdminSidebar currentTab={currentTab} onSelectTab={(tab) => setCurrentTab(tab)} />
 
       {currentTab === 'chats' ? (

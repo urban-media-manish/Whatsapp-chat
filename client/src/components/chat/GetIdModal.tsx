@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, ShieldCheck, ArrowRight, X } from 'lucide-react';
+import { User, ShieldCheck, ArrowRight, X } from 'lucide-react';
 import { trackPixelLead } from '../../utils/pixel';
 
 interface GetIdModalProps {
@@ -18,7 +18,6 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
   initialPhone = ''
 }) => {
   const [name, setName] = useState(initialName);
-  const [phone, setPhone] = useState(initialPhone);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -29,24 +28,18 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
     setError(null);
 
     const cleanName = name.trim();
-    const cleanPhone = phone.trim();
 
     if (!cleanName) {
       setError('Please enter your name');
       return;
     }
 
-    if (!cleanPhone || cleanPhone.replace(/\D/g, '').length < 8) {
-      setError('Please enter a valid WhatsApp number');
-      return;
-    }
-
     // Fire Meta Pixel Lead Event
-    trackPixelLead({ name: cleanName, phone: cleanPhone });
+    trackPixelLead({ name: cleanName, phone: initialPhone });
 
     try {
       setIsSubmitting(true);
-      await onSubmit(cleanName, cleanPhone);
+      await onSubmit(cleanName, initialPhone);
     } catch (err: any) {
       setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
@@ -62,7 +55,7 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
         className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer" 
       />
 
-      {/* Modal Card - Compact & Reduced Height */}
+      {/* Modal Card */}
       <div className="relative w-full max-w-[360px] bg-white dark:bg-[#1f2c33] rounded-2xl shadow-2xl border border-black/[0.08] dark:border-white/[0.1] overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
         {onClose && (
           <button
@@ -75,7 +68,7 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
           </button>
         )}
 
-        {/* Compact Header (Logo Removed) */}
+        {/* Header */}
         <div className="bg-gradient-to-r from-[#075e54] to-[#128c7e] dark:from-[#1f2c33] dark:to-[#0b141a] px-4 pt-4 pb-3 text-white text-center relative">
           <h2 className="text-base font-bold tracking-tight text-white flex items-center justify-center gap-1">
             Get Your ID Now
@@ -94,7 +87,7 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
           </div>
         </div>
 
-        {/* Compact Form Body */}
+        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 space-y-3">
           {error && (
             <div className="p-2 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-xs rounded-xl font-medium text-center animate-shake">
@@ -102,7 +95,7 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
             </div>
           )}
 
-          {/* Name Field */}
+          {/* Name Field Only */}
           <div>
             <label className="block text-[11px] font-bold text-[#111b21] dark:text-[#e9edef] mb-1 uppercase tracking-wider">
               Your Name
@@ -123,27 +116,7 @@ export const GetIdModal: React.FC<GetIdModalProps> = ({
             </div>
           </div>
 
-          {/* Phone Field */}
-          <div>
-            <label className="block text-[11px] font-bold text-[#111b21] dark:text-[#e9edef] mb-1 uppercase tracking-wider">
-              WhatsApp / Phone Number
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#8696a0]">
-                <Phone className="w-3.5 h-3.5" />
-              </div>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Enter 10-digit WhatsApp number"
-                className="w-full bg-[#f0f2f5] dark:bg-[#111b21] text-[#111b21] dark:text-[#e9edef] placeholder-[#8696a0] text-xs sm:text-sm rounded-xl pl-9 pr-3 py-2.5 outline-none border border-black/[0.05] dark:border-white/[0.08] focus:border-[#00a884] transition-all font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Action Button: Get ID Now */}
+          {/* Action Button */}
           <div className="pt-1">
             <button
               type="submit"
