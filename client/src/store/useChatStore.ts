@@ -61,6 +61,17 @@ interface ChatState {
 
 let fetchConversationsPromise: Promise<void> | null = null;
 
+const getInitialConversations = (): Conversation[] => {
+  try {
+    const cached = localStorage.getItem('admin_cached_conversations');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (_) {}
+  return [];
+};
+
 export const useChatStore = create<ChatState>((set, get) => ({
   theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
 
@@ -85,7 +96,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ theme });
   },
 
-  conversations: [],
+  conversations: getInitialConversations(),
   activeConversation: null,
   messages: [],
   messagesCache: {},
@@ -126,6 +137,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (conv) {
       socket.emit('join_conversation', { conversationId: conv._id, role: 'agent' });
       socket.emit('mark_read', { conversationId: conv._id, readerType: 'agent' });
+      try {
+        localStorage.setItem('admin_active_conv_id', conv._id);
+      } catch (_) {}
+    } else {
+      try {
+        localStorage.removeItem('admin_active_conv_id');
+      } catch (_) {}
     }
 
     const updatedConvs = conversations.map(c =>
@@ -152,7 +170,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return fetchConversationsPromise;
     }
 
-    // Only show full loading spinner on initial cold start to avoid refresh glitches
+    // Only show full loading spinner on initial cold start if no cache exists
     if (get().conversations.length === 0) {
       set({ isLoadingConversations: true });
     }
@@ -169,11 +187,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
         });
 
         // Keep activeConversation in sync with fresh data — DON'T deselect it
+        const savedActiveId = localStorage.getItem('admin_active_conv_id');
         const updatedActive = activeConversation
           ? (list.find(c => c._id === activeConversation._id) || activeConversation)
-          : null;
+          : (savedActiveId ? list.find(c => c._id === savedActiveId) || null : null);
 
         set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
+
+        try {
+          localStorage.setItem('admin_cached_conversations', JSON.stringify(list));
+        } catch (_) {}
       } catch (err) {
         console.error('Failed to fetch conversations:', err);
         set({ isLoadingConversations: false });

@@ -1111,8 +1111,8 @@ export const CustomerChatPortal: React.FC = () => {
         onScroll={handleScroll}
         className="flex-1 min-h-0 overflow-y-auto p-3 md:px-6 space-y-2 chat-wallpaper relative"
       >
-        {/* In-chat Interactive Name for ID Card (Shown ONLY to new visitor who hasn't added name yet) */}
-        {!hasRegisteredName && !hasCustomerMessage && messages.length <= 1 && (
+        {/* In-chat Interactive Name for ID Card (Shown to any new visitor who hasn't registered name yet) */}
+        {!hasRegisteredName && (
           <div className="mx-auto max-w-sm my-3 p-4 rounded-2xl bg-white/95 dark:bg-[#202c33]/95 shadow-lg border border-[#00a884]/40 text-center animate-in fade-in zoom-in-95 backdrop-blur-md">
             <div className="w-12 h-12 rounded-full bg-[#00a884]/15 text-[#00a884] dark:text-emerald-400 mx-auto flex items-center justify-center mb-2.5 shadow-xs">
               <User className="w-6 h-6" />

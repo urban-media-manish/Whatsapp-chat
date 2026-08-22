@@ -44,8 +44,10 @@ router.get('/', protect, async (req, res) => {
     }
 
     let conversations = await Conversation.find(query)
+      .sort({ isPinned: -1, updatedAt: -1 })
       .populate('customer')
-      .populate('assignedAgent', 'name avatar role email phone status');
+      .populate('assignedAgent', 'name avatar role email phone status')
+      .lean();
 
     const getConvTimestamp = (c) => {
       const t = c.lastMessage?.timestamp || c.updatedAt || c.createdAt;

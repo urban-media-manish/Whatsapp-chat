@@ -62,4 +62,10 @@ const conversationSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+conversationSchema.index({ isArchived: 1, isPinned: -1, updatedAt: -1 });
+conversationSchema.index({ customer: 1 });
+conversationSchema.index({ 'lastMessage.timestamp': -1 });
+conversationSchema.index({ assignedAgent: 1 });
+conversationSchema.index({ status: 1 });
+
 export const Conversation = mongoose.model('Conversation', conversationSchema);
