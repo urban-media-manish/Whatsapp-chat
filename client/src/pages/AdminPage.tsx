@@ -61,7 +61,6 @@ export const AdminPage: React.FC = () => {
 
     const handleConvActivity = (msg: Message) => {
       addMessage(msg);
-      fetchConversations();
     };
 
     const handleConvDeleted = ({ conversationId }: { conversationId: string }) => {

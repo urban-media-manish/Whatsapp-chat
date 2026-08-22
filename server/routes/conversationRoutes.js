@@ -59,18 +59,29 @@ router.get('/', protect, async (req, res) => {
       return getConvTimestamp(b) - getConvTimestamp(a);
     });
 
-    // Filter out pure passive guest sessions (guest with 0 customer messages/interactions)
+    // Filter out ONLY pure passive untouched guest sessions (0 interactions from user or agent)
     conversations = conversations.filter(conv => {
       if (!conv.customer) return false;
       const isGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
       if (!isGuest) return true;
 
-      // For guests, include if customer has sent messages, has unread, has assigned agent, or has tags
-      const hasInteraction = conv.lastMessage?.senderType === 'customer' ||
-                             (conv.unreadCount && conv.unreadCount > 0) ||
-                             (conv.tags && conv.tags.length > 0) ||
-                             Boolean(conv.assignedAgent);
-      return Boolean(hasInteraction);
+      const lastContent = conv.lastMessage?.content || '';
+      const isUntouchedDefaultPrompt =
+        lastContent === 'Please enter your name for Id' &&
+        conv.lastMessage?.senderType === 'agent' &&
+        (conv.unreadCount || 0) === 0;
+
+      // If it has tags, assigned agent, unread count, or real messages exchanged -> KEEP IT
+      if (conv.assignedAgent || (conv.tags && conv.tags.length > 0) || (conv.unreadCount && conv.unreadCount > 0)) {
+        return true;
+      }
+
+      // If it is an untouched initial prompt with no responses, ignore it
+      if (isUntouchedDefaultPrompt) {
+        return false;
+      }
+
+      return true;
     });
 
     if (search && search.trim() !== '') {
