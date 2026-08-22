@@ -376,19 +376,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   deleteConversation: async (id: string) => {
+    set((state) => {
+      const isCurrent = state.activeConversation?._id === id;
+      return {
+        conversations: state.conversations.filter(c => c._id !== id),
+        activeConversation: isCurrent ? null : state.activeConversation,
+        messages: isCurrent ? [] : state.messages
+      };
+    });
+
     try {
       await api.deleteConversation(id);
-      set((state) => {
-        const isCurrent = state.activeConversation?._id === id;
-        return {
-          conversations: state.conversations.filter(c => c._id !== id),
-          activeConversation: isCurrent ? null : state.activeConversation,
-          messages: isCurrent ? [] : state.messages
-        };
-      });
     } catch (err) {
-      console.error('Delete conversation error:', err);
-      alert('Failed to delete conversation');
+      console.warn('Delete conversation background sync:', err);
     }
   },
 

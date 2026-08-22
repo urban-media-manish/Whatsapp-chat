@@ -67,12 +67,19 @@ const generateAISuggestions = (lastMessages, customerName = 'Customer') => {
   }
 };
 
-// @route POST /api/ai/suggest
 router.post('/suggest', protect, async (req, res) => {
   try {
     const { conversationId } = req.body;
     const conversation = await Conversation.findById(conversationId).populate('customer');
-    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+    if (!conversation) {
+      return res.json({
+        suggestions: [
+          'Thank you for contacting support! How can I assist you with this today?',
+          'I have received your message and I am reviewing the details now.',
+          'Is there anything else specific you would like me to check on your account?'
+        ]
+      });
+    }
 
     const recentMessages = await Message.find({ conversation: conversationId })
       .sort({ createdAt: -1 })
