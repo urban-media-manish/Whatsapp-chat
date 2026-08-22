@@ -61,24 +61,22 @@ router.get('/', protect, async (req, res) => {
       return getConvTimestamp(b) - getConvTimestamp(a);
     });
 
-    // Filter out ONLY pure passive untouched guest sessions (0 interactions from user or agent)
+    // Filter out untouched initial sessions where the customer has not sent any name or message yet
     conversations = conversations.filter(conv => {
       if (!conv.customer) return false;
-      const isGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
-      if (!isGuest) return true;
 
       const lastContent = conv.lastMessage?.content || '';
       const isUntouchedDefaultPrompt =
-        lastContent === 'Please enter your name for Id' &&
+        (!lastContent || lastContent === 'Please enter your name for Id') &&
         conv.lastMessage?.senderType === 'agent' &&
         (conv.unreadCount || 0) === 0;
 
-      // If it has tags, assigned agent, unread count, or real messages exchanged -> KEEP IT
+      // If it has assigned agent, tags, or unread count -> KEEP IT
       if (conv.assignedAgent || (conv.tags && conv.tags.length > 0) || (conv.unreadCount && conv.unreadCount > 0)) {
         return true;
       }
 
-      // If it is an untouched initial prompt with no responses, ignore it
+      // If customer has not interacted or sent any message yet, hide from Admin list
       if (isUntouchedDefaultPrompt) {
         return false;
       }
