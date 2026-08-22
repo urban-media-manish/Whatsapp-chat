@@ -24,5 +24,17 @@ export default defineConfig({
         ws: true
       }
     }
+  },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/lucide-react')) return 'icons';
+          if (id.includes('node_modules/socket.io-client')) return 'socket';
+          if (id.includes('node_modules')) return 'vendor';
+        }
+      }
+    }
   }
 });

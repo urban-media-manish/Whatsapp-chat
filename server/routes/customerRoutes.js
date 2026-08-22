@@ -120,10 +120,6 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
 
       conversation = await Conversation.findById(conversation._id)
         .populate('assignedAgent', 'name avatar role email phone status');
-
-      if (req.io && !customer.isGuest && customer.name && !customer.name.startsWith('Guest_')) {
-        req.io.to('agent_workspace_room').emit('new_conversation', conversation);
-      }
     } else {
       // If conversation exists with 0 messages, ensure initial prompt is present
       const msgCount = await Message.countDocuments({ conversation: conversation._id });
@@ -138,7 +134,6 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
       }
     }
 
-    const { Message } = await import('../models/Message.js');
     const messages = await Message.find({ conversation: conversation._id })
       .populate('replyTo')
       .sort({ createdAt: 1 });

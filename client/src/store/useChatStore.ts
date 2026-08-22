@@ -194,6 +194,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
         set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
 
+        if (updatedActive?._id) {
+          get().fetchMessages(updatedActive._id);
+        }
+
         try {
           localStorage.setItem('admin_cached_conversations', JSON.stringify(list));
         } catch (_) {}

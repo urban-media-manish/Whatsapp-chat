@@ -61,24 +61,22 @@ router.get('/', protect, async (req, res) => {
       return getConvTimestamp(b) - getConvTimestamp(a);
     });
 
-    // Filter out ONLY pure passive untouched guest sessions (0 interactions from user or agent)
+    // Filter out untouched initial sessions where the customer has not sent any name or message yet
     conversations = conversations.filter(conv => {
       if (!conv.customer) return false;
-      const isGuest = conv.customer.isGuest || (conv.customer.name && conv.customer.name.startsWith('Guest_'));
-      if (!isGuest) return true;
 
       const lastContent = conv.lastMessage?.content || '';
       const isUntouchedDefaultPrompt =
-        lastContent === 'Please enter your name for Id' &&
+        (!lastContent || lastContent === 'Please enter your name for Id') &&
         conv.lastMessage?.senderType === 'agent' &&
         (conv.unreadCount || 0) === 0;
 
-      // If it has tags, assigned agent, unread count, or real messages exchanged -> KEEP IT
+      // If it has assigned agent, tags, or unread count -> KEEP IT
       if (conv.assignedAgent || (conv.tags && conv.tags.length > 0) || (conv.unreadCount && conv.unreadCount > 0)) {
         return true;
       }
 
-      // If it is an untouched initial prompt with no responses, ignore it
+      // If customer has not interacted or sent any message yet, hide from Admin list
       if (isUntouchedDefaultPrompt) {
         return false;
       }
@@ -96,18 +94,34 @@ router.get('/', protect, async (req, res) => {
       });
     }
 
-    // Deduplicate conversations per unique customer ID (preserve the most recent conversation per customer)
-    const seenCustomers = new Set();
-    const deduplicatedConvs = [];
+    // Deduplicate conversations per unique customer identifier (phone / non-guest name / customer ID)
+    // Always prioritize the record that actually has exchanged messages
+    const customerConvMap = new Map();
 
     for (const conv of conversations) {
-      const custId = conv.customer?._id?.toString() || conv._id.toString();
+      const phoneDigits = conv.customer?.phone ? conv.customer.phone.replace(/\D/g, '') : '';
+      const cleanName = conv.customer?.name && !conv.customer.name.startsWith('Guest_') ? conv.customer.name.trim().toLowerCase() : '';
+      
+      const key = (phoneDigits.length >= 7)
+        ? `phone_${phoneDigits.slice(-10)}`
+        : (cleanName ? `name_${cleanName}` : (conv.customer?._id?.toString() || conv._id.toString()));
 
-      if (!seenCustomers.has(custId)) {
-        seenCustomers.add(custId);
-        deduplicatedConvs.push(conv);
+      if (!customerConvMap.has(key)) {
+        customerConvMap.set(key, conv);
+      } else {
+        const existing = customerConvMap.get(key);
+        const currentHasMsg = conv.lastMessage?.content && conv.lastMessage.content !== 'Please enter your name for Id';
+        const existingHasMsg = existing.lastMessage?.content && existing.lastMessage.content !== 'Please enter your name for Id';
+
+        if (currentHasMsg && !existingHasMsg) {
+          customerConvMap.set(key, conv);
+        } else if (getConvTimestamp(conv) > getConvTimestamp(existing) && (currentHasMsg || !existingHasMsg)) {
+          customerConvMap.set(key, conv);
+        }
       }
     }
+
+    const deduplicatedConvs = Array.from(customerConvMap.values());
 
     // Final sort: Pinned first, then newest message time descending
     deduplicatedConvs.sort((a, b) => {

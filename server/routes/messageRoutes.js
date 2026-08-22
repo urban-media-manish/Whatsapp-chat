@@ -11,9 +11,30 @@ router.get('/:conversationId', async (req, res) => {
   try {
     const { conversationId } = req.params;
 
-    const messages = await Message.find({ conversation: conversationId })
+    let messages = await Message.find({ conversation: conversationId })
       .populate('replyTo')
       .sort({ createdAt: 1 });
+
+    if (messages.length === 0) {
+      // Check if this customer has messages in another conversation with same phone/name/session
+      const currentConv = await Conversation.findById(conversationId).populate('customer');
+      if (currentConv && currentConv.customer) {
+        const custName = currentConv.customer.name;
+        const custPhone = currentConv.customer.phone;
+        const searchOr = [{ _id: currentConv.customer._id }];
+        if (custPhone && custPhone.trim() !== '') searchOr.push({ phone: custPhone });
+        if (custName && !custName.startsWith('Guest_')) searchOr.push({ name: custName });
+
+        const matchingCustomers = await Customer.find({ $or: searchOr }).select('_id');
+        const custIds = matchingCustomers.map(c => c._id);
+        const relatedConvs = await Conversation.find({ customer: { $in: custIds } }).select('_id');
+        const convIds = relatedConvs.map(c => c._id);
+
+        messages = await Message.find({ conversation: { $in: convIds } })
+          .populate('replyTo')
+          .sort({ createdAt: 1 });
+      }
+    }
 
     // Clean up any old system greetings
     const cleanMessages = [];
