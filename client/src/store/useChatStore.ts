@@ -59,6 +59,8 @@ interface ChatState {
   fetchQuickReplies: () => Promise<void>;
 }
 
+let fetchConversationsPromise: Promise<void> | null = null;
+
 export const useChatStore = create<ChatState>((set, get) => ({
   theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
 
@@ -146,30 +148,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   fetchConversations: async () => {
+    if (fetchConversationsPromise) {
+      return fetchConversationsPromise;
+    }
+
     // Only show full loading spinner on initial cold start to avoid refresh glitches
     if (get().conversations.length === 0) {
       set({ isLoadingConversations: true });
     }
-    try {
-      const { activeFilter, statusFilter, priorityFilter, tagFilter, searchQuery, activeConversation } = get();
-      const list = await api.getConversations({
-        filter: activeFilter,
-        status: statusFilter,
-        priority: priorityFilter,
-        tag: tagFilter,
-        search: searchQuery
-      });
 
-      // Keep activeConversation in sync with fresh data — DON'T deselect it
-      const updatedActive = activeConversation
-        ? (list.find(c => c._id === activeConversation._id) || activeConversation)
-        : null;
+    fetchConversationsPromise = (async () => {
+      try {
+        const { activeFilter, statusFilter, priorityFilter, tagFilter, searchQuery, activeConversation } = get();
+        const list = await api.getConversations({
+          filter: activeFilter,
+          status: statusFilter,
+          priority: priorityFilter,
+          tag: tagFilter,
+          search: searchQuery
+        });
 
-      set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
-    } catch (err) {
-      console.error('Failed to fetch conversations:', err);
-      set({ isLoadingConversations: false });
-    }
+        // Keep activeConversation in sync with fresh data — DON'T deselect it
+        const updatedActive = activeConversation
+          ? (list.find(c => c._id === activeConversation._id) || activeConversation)
+          : null;
+
+        set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
+      } catch (err) {
+        console.error('Failed to fetch conversations:', err);
+        set({ isLoadingConversations: false });
+      } finally {
+        fetchConversationsPromise = null;
+      }
+    })();
+
+    return fetchConversationsPromise;
   },
 
   fetchMessages: async (conversationId: string) => {
@@ -228,6 +241,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     const updatedCache = { ...messagesCache, [msgConvId]: updatedMsgs };
     const updatedCurrentMessages = isCurrentActive ? updatedMsgs : messages;
+
+    if (customerConversation && customerConversation._id === msgConvId) {
+      try {
+        localStorage.setItem('support_cached_messages', JSON.stringify(updatedMsgs));
+      } catch (_) {}
+    }
 
     const conversationExists = conversations.some(c => c._id === msgConvId);
     if (!conversationExists) {

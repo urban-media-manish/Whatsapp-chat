@@ -51,12 +51,17 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    let newConvTimer: any = null;
+
     const handleReceive = (msg: Message) => {
       addMessage(msg);
     };
 
     const handleNewConv = () => {
-      fetchConversations();
+      if (newConvTimer) clearTimeout(newConvTimer);
+      newConvTimer = setTimeout(() => {
+        fetchConversations();
+      }, 300);
     };
 
     const handleConvActivity = (msg: Message) => {

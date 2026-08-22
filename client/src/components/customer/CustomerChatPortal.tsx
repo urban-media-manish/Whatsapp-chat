@@ -136,6 +136,17 @@ export const CustomerChatPortal: React.FC = () => {
     const storedName = localStorage.getItem(NAME_KEY) || localStorage.getItem('customer_name') || '';
     const storedPhone = localStorage.getItem(PHONE_KEY) || localStorage.getItem('customer_phone') || '';
 
+    // Instant 0ms Chat Render: Load cached messages immediately from localStorage
+    try {
+      const cachedMsgs = localStorage.getItem('support_cached_messages');
+      if (cachedMsgs) {
+        const parsed = JSON.parse(cachedMsgs);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          useChatStore.setState({ messages: parsed });
+        }
+      }
+    } catch (_) {}
+
     const init = async () => {
       // Fire PageView when React chat component fully mounts (with retry polling for async fbevents.js)
       try { trackPixelPageView(); } catch (_) {}
@@ -168,14 +179,28 @@ export const CustomerChatPortal: React.FC = () => {
         }
 
         setCustomerSession(data.customer, data.conversation);
-        await fetchMessages(data.conversation._id);
+
+        // If messages are returned directly in the single init response, load them instantly
+        if (data.messages && Array.isArray(data.messages)) {
+          useChatStore.setState({
+            messages: data.messages,
+            messagesCache: {
+              ...useChatStore.getState().messagesCache,
+              [data.conversation._id]: data.messages
+            }
+          });
+          try {
+            localStorage.setItem('support_cached_messages', JSON.stringify(data.messages));
+          } catch (_) {}
+        } else {
+          await fetchMessages(data.conversation._id);
+        }
 
         socket.emit('join_conversation', {
           conversationId: data.conversation._id,
           role: 'customer',
           userId: data.customer._id
         });
-
 
       } catch (err) {
         console.error('Customer init error:', err);
