@@ -4,7 +4,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' 
 const API_BASE = `${BASE_URL}/api`;
 
 const getHeaders = () => {
-  const token = localStorage.getItem('agent_token');
+  const token = localStorage.getItem('agent_token') || localStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
