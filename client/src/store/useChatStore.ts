@@ -166,6 +166,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   fetchConversations: async () => {
+    // Only agents/admins with a valid token should fetch conversations
+    if (!localStorage.getItem('token')) {
+      return;
+    }
+
     if (fetchConversationsPromise) {
       return fetchConversationsPromise;
     }
@@ -278,7 +283,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const conversationExists = conversations.some(c => c._id === msgConvId);
     if (!conversationExists) {
       set({ messagesCache: updatedCache, messages: updatedCurrentMessages });
-      get().fetchConversations();
+      if (localStorage.getItem('token') || activeConversation) {
+        get().fetchConversations();
+      }
     } else {
       const updatedConvs = conversations.map(c => {
         if (c._id === msgConvId) {
