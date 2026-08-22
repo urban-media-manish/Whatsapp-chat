@@ -59,6 +59,8 @@ interface ChatState {
   fetchQuickReplies: () => Promise<void>;
 }
 
+let fetchConversationsPromise: Promise<void> | null = null;
+
 export const useChatStore = create<ChatState>((set, get) => ({
   theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
 
@@ -146,27 +148,41 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   fetchConversations: async () => {
-    set({ isLoadingConversations: true });
-    try {
-      const { activeFilter, statusFilter, priorityFilter, tagFilter, searchQuery, activeConversation } = get();
-      const list = await api.getConversations({
-        filter: activeFilter,
-        status: statusFilter,
-        priority: priorityFilter,
-        tag: tagFilter,
-        search: searchQuery
-      });
-
-      // Keep activeConversation in sync with fresh data — DON'T deselect it
-      const updatedActive = activeConversation
-        ? (list.find(c => c._id === activeConversation._id) || activeConversation)
-        : null;
-
-      set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
-    } catch (err) {
-      console.error('Failed to fetch conversations:', err);
-      set({ isLoadingConversations: false });
+    if (fetchConversationsPromise) {
+      return fetchConversationsPromise;
     }
+
+    // Only show full loading spinner on initial cold start to avoid refresh glitches
+    if (get().conversations.length === 0) {
+      set({ isLoadingConversations: true });
+    }
+
+    fetchConversationsPromise = (async () => {
+      try {
+        const { activeFilter, statusFilter, priorityFilter, tagFilter, searchQuery, activeConversation } = get();
+        const list = await api.getConversations({
+          filter: activeFilter,
+          status: statusFilter,
+          priority: priorityFilter,
+          tag: tagFilter,
+          search: searchQuery
+        });
+
+        // Keep activeConversation in sync with fresh data — DON'T deselect it
+        const updatedActive = activeConversation
+          ? (list.find(c => c._id === activeConversation._id) || activeConversation)
+          : null;
+
+        set({ conversations: list, isLoadingConversations: false, activeConversation: updatedActive });
+      } catch (err) {
+        console.error('Failed to fetch conversations:', err);
+        set({ isLoadingConversations: false });
+      } finally {
+        fetchConversationsPromise = null;
+      }
+    })();
+
+    return fetchConversationsPromise;
   },
 
   fetchMessages: async (conversationId: string) => {
@@ -196,27 +212,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ? (msg.conversation as any)._id
       : msg.conversation;
 
-    // Update messagesCache for this conversation
-    const currentConvMsgs = messagesCache[msgConvId] || [];
-    const cacheIndex = currentConvMsgs.findIndex(m =>
+    if (!msgConvId) return;
+
+    const isCurrentActive = Boolean(
+      (activeConversation && activeConversation._id === msgConvId) ||
+      (customerConversation && customerConversation._id === msgConvId)
+    );
+
+    // Get the most complete array of existing messages for this conversation
+    const cachedList = messagesCache[msgConvId] || [];
+    const baseMessages = isCurrentActive && messages.length > cachedList.length
+      ? messages
+      : cachedList;
+
+    // Check if message already exists by ID or by optimistic temp ID match
+    const existingIndex = baseMessages.findIndex(m =>
       m._id === msg._id ||
       (m._id.startsWith('temp_') && m.content === msg.content && m.senderType === msg.senderType)
     );
-    let updatedConvMsgs: Message[];
-    if (cacheIndex !== -1) {
-      updatedConvMsgs = [...currentConvMsgs];
-      updatedConvMsgs[cacheIndex] = { ...updatedConvMsgs[cacheIndex], ...msg, _id: msg._id };
-    } else {
-      updatedConvMsgs = [...currentConvMsgs, msg];
-    }
-    const updatedCache = { ...messagesCache, [msgConvId]: updatedConvMsgs };
 
-    let updatedCurrentMessages = messages;
-    if (
-      (activeConversation && activeConversation._id === msgConvId) ||
-      (customerConversation && customerConversation._id === msgConvId)
-    ) {
-      updatedCurrentMessages = updatedConvMsgs;
+    let updatedMsgs: Message[];
+    if (existingIndex !== -1) {
+      updatedMsgs = [...baseMessages];
+      updatedMsgs[existingIndex] = { ...updatedMsgs[existingIndex], ...msg, _id: msg._id };
+    } else {
+      updatedMsgs = [...baseMessages, msg];
+    }
+
+    const updatedCache = { ...messagesCache, [msgConvId]: updatedMsgs };
+    const updatedCurrentMessages = isCurrentActive ? updatedMsgs : messages;
+
+    if (customerConversation && customerConversation._id === msgConvId) {
+      try {
+        localStorage.setItem('support_cached_messages', JSON.stringify(updatedMsgs));
+      } catch (_) {}
     }
 
     const conversationExists = conversations.some(c => c._id === msgConvId);
@@ -226,23 +255,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } else {
       const updatedConvs = conversations.map(c => {
         if (c._id === msgConvId) {
+          const isViewingThisChat = activeConversation?._id === c._id || customerConversation?._id === c._id;
           return {
             ...c,
             lastMessage: {
-              content: msg.content || msg.fileName || `[${msg.type}]`,
+              content: msg.content || msg.fileName || `[${msg.type || 'message'}]`,
               senderType: msg.senderType,
-              type: msg.type,
-              timestamp: msg.createdAt
+              type: msg.type || 'text',
+              timestamp: msg.createdAt || new Date().toISOString()
             },
-            updatedAt: msg.createdAt,
-            unreadCount: (activeConversation?._id === c._id) ? 0 : (c.unreadCount || 0) + 1
+            updatedAt: msg.createdAt || new Date().toISOString(),
+            unreadCount: isViewingThisChat ? 0 : (msg.senderType === 'customer' ? (c.unreadCount || 0) + 1 : c.unreadCount || 0)
           };
         }
         return c;
       }).sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+        const aTime = a.lastMessage?.timestamp || a.updatedAt || a.createdAt;
+        const bTime = b.lastMessage?.timestamp || b.updatedAt || b.createdAt;
+        return new Date(bTime || 0).getTime() - new Date(aTime || 0).getTime();
       });
 
       set({ messagesCache: updatedCache, messages: updatedCurrentMessages, conversations: updatedConvs });

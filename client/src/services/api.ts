@@ -53,7 +53,7 @@ export const api = {
     name?: string;
     phone?: string;
     isGuest?: boolean;
-  }): Promise<{ customer: Customer; conversation: Conversation }> => {
+  }): Promise<{ customer: Customer; conversation: Conversation; messages?: Message[] }> => {
     const res = await fetch(`${API_BASE}/customer/init`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

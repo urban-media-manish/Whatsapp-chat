@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, Download, X, Play, Pause, Volume2 } from 'lucide-react';
+import { FileText, Download, X, Play, Pause, Volume2, Image as ImageIcon, AlertCircle } from 'lucide-react';
 import type { MessageType } from '../../types';
 
 const WhatsAppAudioPlayer: React.FC<{ src: string }> = ({ src }) => {
@@ -126,14 +126,17 @@ const getFullMediaUrl = (url?: string) => {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
-  const apiHost = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`;
-  const cleanBase = apiHost.endsWith('/') ? apiHost.slice(0, -1) : apiHost;
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanBase}${cleanUrl}`;
+  if (import.meta.env.VITE_API_URL) {
+    const base = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    return `${base}${cleanUrl}`;
+  }
+  return cleanUrl;
 };
 
 export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, fileName, fileSize }) => {
   const [showLightbox, setShowLightbox] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   if (!fileUrl) return null;
   const fullSrc = getFullMediaUrl(fileUrl);
@@ -157,6 +160,26 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
   const isPdfFile = type === 'pdf' || cleanFileName.endsWith('.pdf') || cleanFileName.includes('.pdf?');
 
   if (isImageFile) {
+    if (imageError) {
+      return (
+        <div className="mt-1 flex items-center gap-3 p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 max-w-sm">
+          <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-500 flex-shrink-0">
+            <ImageIcon className="w-5 h-5" />
+          </div>
+          <div className="truncate flex-1 min-w-0">
+            <p className="text-xs font-semibold truncate text-[#111b21] dark:text-[#e9edef]">
+              {fileName || 'Photo / Image'}
+            </p>
+            <p className="text-[10px] text-[#8696a0] flex items-center gap-1 mt-0.5">
+              <AlertCircle className="w-3 h-3 text-amber-500" />
+              <span>Media expired / File moved</span>
+              {fileSize ? ` • ${formatBytes(fileSize)}` : ''}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-1 relative group rounded-xl overflow-hidden border border-black/10 dark:border-white/10 max-w-xs sm:max-w-sm bg-black/5 dark:bg-white/5">
         <img
@@ -164,6 +187,7 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
           alt={fileName || 'Attached Image'}
           className="w-full max-h-72 object-cover cursor-pointer hover:scale-[1.02] transition-transform duration-200 block"
           loading="lazy"
+          onError={() => setImageError(true)}
           onClick={() => setShowLightbox(true)}
         />
         {showLightbox && (

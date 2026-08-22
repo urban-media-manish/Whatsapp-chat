@@ -164,7 +164,6 @@ router.post('/', async (req, res) => {
     if (req.io) {
       req.io.to(`conv_${conversationId}`).emit('receive_message', populatedMsg);
       req.io.to('agent_workspace_room').emit('conversation_activity', populatedMsg);
-      req.io.to('agent_workspace_room').emit('new_conversation', conversation);
     }
 
     // Auto-send Welcome Message after customer sends their name / first message (Strictly Once)

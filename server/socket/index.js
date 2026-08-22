@@ -195,9 +195,8 @@ export const setupSocket = (io) => {
         // Notify sender of status update (Single tick / Double tick / Blue tick)
         socket.emit('message_status_update', { messageId: messageData._id, status: finalStatus, conversationId: messageData.conversation });
 
-        // Broadcast update to global agent workspace list
+        // Broadcast update to global agent workspace list (instantly updates sidebar in-memory)
         io.to('agent_workspace_room').emit('conversation_activity', messageData);
-        io.to('agent_workspace_room').emit('new_conversation');
       } catch (err) {
         console.error('Error evaluating message tick status:', err);
         socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);

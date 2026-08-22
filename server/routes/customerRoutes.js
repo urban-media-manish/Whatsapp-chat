@@ -138,9 +138,15 @@ Note :- ( Humare yaha first dep0zit pe 5% b0nu$ milega )`;
       }
     }
 
+    const { Message } = await import('../models/Message.js');
+    const messages = await Message.find({ conversation: conversation._id })
+      .populate('replyTo')
+      .sort({ createdAt: 1 });
+
     res.json({
       customer,
-      conversation
+      conversation,
+      messages
     });
   } catch (error) {
     console.error('Customer init error:', error);
