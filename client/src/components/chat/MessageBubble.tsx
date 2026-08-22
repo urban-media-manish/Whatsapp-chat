@@ -223,7 +223,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
         )}
 
         {/* Media Preview */}
-        {message.type !== 'text' && (
+        {(message.type !== 'text' || Boolean(message.fileUrl) || (Boolean(message.content) && message.content.startsWith('[Attached '))) && (
           <MediaPreviewer
             type={message.type}
             fileUrl={message.fileUrl}
@@ -247,7 +247,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, currentUs
             </div>
           </div>
         ) : (
-          !(message.type !== 'text' && (message.content.startsWith('[Attached ') || message.content === '[Voice Note]' || message.content === '')) && (
+          !(message.type !== 'text' && (message.content.startsWith('[Attached ') || message.content === '[Voice Note]' || message.content === '')) &&
+          !(message.fileUrl && message.content.startsWith('[Attached ')) && (
             <p className="text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap select-text" style={{ overflowWrap: 'anywhere' }}>
               {renderFormattedText(message.content, isSentByMe)}
               {message.isEdited && <span className="text-[9px] opacity-60 ml-1 italic">(edited)</span>}

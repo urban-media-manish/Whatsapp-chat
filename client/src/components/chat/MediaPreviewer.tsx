@@ -121,14 +121,24 @@ interface MediaPreviewerProps {
   fileSize?: number;
 }
 
-const getFullMediaUrl = (url?: string) => {
+export const getFullMediaUrl = (url?: string) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-  if (import.meta.env.VITE_API_URL) {
-    const base = import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+  
+  let backendBase = import.meta.env.VITE_API_URL;
+  if (!backendBase && typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      backendBase = '';
+    } else {
+      backendBase = 'https://whatsapp-chat-backend-6sz7.onrender.com';
+    }
+  }
+
+  if (backendBase) {
+    const base = backendBase.replace(/\/+$/, '');
     return `${base}${cleanUrl}`;
   }
   return cleanUrl;
@@ -181,21 +191,21 @@ export const MediaPreviewer: React.FC<MediaPreviewerProps> = ({ type, fileUrl, f
     }
 
     return (
-      <div className="mt-1 relative group rounded-xl overflow-hidden border border-black/10 dark:border-white/10 max-w-xs sm:max-w-sm bg-black/5 dark:bg-white/5">
+      <div className="mt-1 mb-1 relative group rounded-2xl overflow-hidden shadow-sm max-w-[320px] bg-black/5 dark:bg-white/5">
         <img
           src={fullSrc}
           alt={fileName || 'Attached Image'}
-          className="w-full max-h-72 object-cover cursor-pointer hover:scale-[1.02] transition-transform duration-200 block"
+          className="w-full max-h-80 object-cover cursor-pointer hover:opacity-95 transition-opacity duration-150 block rounded-2xl"
           loading="lazy"
           onError={() => setImageError(true)}
           onClick={() => setShowLightbox(true)}
         />
         {showLightbox && (
-          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowLightbox(false)}>
-            <button className="absolute top-4 right-4 text-white p-2 rounded-full bg-white/20 hover:bg-white/40 cursor-pointer">
+          <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-lg flex items-center justify-center p-4" onClick={() => setShowLightbox(false)}>
+            <button className="absolute top-4 right-4 text-white p-2.5 rounded-full bg-white/15 hover:bg-white/30 cursor-pointer transition-all">
               <X className="w-6 h-6" />
             </button>
-            <img src={fullSrc} alt={fileName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" />
+            <img src={fullSrc} alt={fileName} className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" />
           </div>
         )}
       </div>

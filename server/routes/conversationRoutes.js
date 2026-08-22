@@ -359,13 +359,13 @@ router.delete('/:id', protect, async (req, res) => {
   try {
     const conversationId = req.params.id;
     const conversation = await Conversation.findById(conversationId);
-    if (!conversation) {
-      return res.status(404).json({ message: 'Conversation not found' });
-    }
-
+    
     const { Message } = await import('../models/Message.js');
     await Message.deleteMany({ conversation: conversationId });
-    await Conversation.findByIdAndDelete(conversationId);
+
+    if (conversation) {
+      await Conversation.findByIdAndDelete(conversationId);
+    }
 
     // Broadcast socket event
     if (req.io) {

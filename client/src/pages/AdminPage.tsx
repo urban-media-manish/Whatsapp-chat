@@ -55,17 +55,19 @@ export const AdminPage: React.FC = () => {
 
     const handleReceive = (msg: Message) => {
       addMessage(msg);
+      fetchConversations();
     };
 
     const handleNewConv = () => {
       if (newConvTimer) clearTimeout(newConvTimer);
       newConvTimer = setTimeout(() => {
         fetchConversations();
-      }, 300);
+      }, 200);
     };
 
     const handleConvActivity = (msg: Message) => {
       addMessage(msg);
+      fetchConversations();
     };
 
     const handleConvDeleted = ({ conversationId }: { conversationId: string }) => {
