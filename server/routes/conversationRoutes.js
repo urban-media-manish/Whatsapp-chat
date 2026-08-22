@@ -96,18 +96,34 @@ router.get('/', protect, async (req, res) => {
       });
     }
 
-    // Deduplicate conversations per unique customer ID (preserve the most recent conversation per customer)
-    const seenCustomers = new Set();
-    const deduplicatedConvs = [];
+    // Deduplicate conversations per unique customer identifier (phone / non-guest name / customer ID)
+    // Always prioritize the record that actually has exchanged messages
+    const customerConvMap = new Map();
 
     for (const conv of conversations) {
-      const custId = conv.customer?._id?.toString() || conv._id.toString();
+      const phoneDigits = conv.customer?.phone ? conv.customer.phone.replace(/\D/g, '') : '';
+      const cleanName = conv.customer?.name && !conv.customer.name.startsWith('Guest_') ? conv.customer.name.trim().toLowerCase() : '';
+      
+      const key = (phoneDigits.length >= 7)
+        ? `phone_${phoneDigits.slice(-10)}`
+        : (cleanName ? `name_${cleanName}` : (conv.customer?._id?.toString() || conv._id.toString()));
 
-      if (!seenCustomers.has(custId)) {
-        seenCustomers.add(custId);
-        deduplicatedConvs.push(conv);
+      if (!customerConvMap.has(key)) {
+        customerConvMap.set(key, conv);
+      } else {
+        const existing = customerConvMap.get(key);
+        const currentHasMsg = conv.lastMessage?.content && conv.lastMessage.content !== 'Please enter your name for Id';
+        const existingHasMsg = existing.lastMessage?.content && existing.lastMessage.content !== 'Please enter your name for Id';
+
+        if (currentHasMsg && !existingHasMsg) {
+          customerConvMap.set(key, conv);
+        } else if (getConvTimestamp(conv) > getConvTimestamp(existing) && (currentHasMsg || !existingHasMsg)) {
+          customerConvMap.set(key, conv);
+        }
       }
     }
+
+    const deduplicatedConvs = Array.from(customerConvMap.values());
 
     // Final sort: Pinned first, then newest message time descending
     deduplicatedConvs.sort((a, b) => {

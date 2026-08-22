@@ -18,7 +18,7 @@ interface AdminChatAreaProps {
 }
 
 export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPanel, showContextPanel }) => {
-  const { activeConversation, messages, addMessage, markAllMessagesRead, fetchConversations, typingState, onlineCustomers, setActiveConversation, deleteConversation, clearChat } = useChatStore();
+  const { activeConversation, messages, fetchMessages, addMessage, markAllMessagesRead, fetchConversations, typingState, onlineCustomers, setActiveConversation, deleteConversation, clearChat } = useChatStore();
   const { user } = useAuthStore();
   const [agents, setAgents] = useState<User[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -61,9 +61,11 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
     }
   }, [user?._id]);
 
-  // Fast Conversation Switch
+  // Fast Conversation Switch & Guaranteed Message Fetch
   useEffect(() => {
-    if (activeConversation) {
+    if (activeConversation?._id) {
+      fetchMessages(activeConversation._id);
+
       socket.emit('join_conversation', {
         conversationId: activeConversation._id,
         role: 'agent',
@@ -536,6 +538,18 @@ export const AdminChatArea: React.FC<AdminChatAreaProps> = ({ onToggleContextPan
               seenMsgKeys.add(msgKey);
               deduplicatedMessages.push(m);
             }
+          }
+
+          if (deduplicatedMessages.length === 0) {
+            return (
+              <div className="flex flex-col items-center justify-center h-full py-16 text-center text-[#8696a0]">
+                <div className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center mb-3">
+                  <MessageSquare className="w-6 h-6 text-[#00a884]" />
+                </div>
+                <p className="text-sm font-semibold text-[#111b21] dark:text-[#e9edef]">No messages yet</p>
+                <p className="text-xs text-[#8696a0] mt-1 max-w-xs">Customer has not sent any message in this session yet. You can start the conversation below.</p>
+              </div>
+            );
           }
 
           return deduplicatedMessages.map((msg) => (
