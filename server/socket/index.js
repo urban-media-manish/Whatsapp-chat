@@ -1,3 +1,7 @@
+import { Message } from '../models/Message.js';
+import { Conversation } from '../models/Conversation.js';
+import { Customer } from '../models/Customer.js';
+
 // Socket presence & Real-time WhatsApp tick tracker
 export const onlineAgents = new Map(); // userId -> socketId
 export const onlineCustomers = new Map(); // customerId/sessionId -> socketId
@@ -49,26 +53,18 @@ export const setupSocket = (io) => {
         });
       }
 
-      // Automatically mark all messages as READ when room is opened
-      try {
-        const { Message } = await import('../models/Message.js');
-        const { Conversation } = await import('../models/Conversation.js');
-
-        await Message.updateMany(
-          { conversation: conversationId, status: { $ne: 'read' } },
-          { $set: { status: 'read' } }
-        );
-
+      // Automatically mark all messages as READ when room is opened (non-blocking)
+      Message.updateMany(
+        { conversation: conversationId, status: { $ne: 'read' } },
+        { $set: { status: 'read' } }
+      ).then(() => {
         if (role === 'agent') {
-          await Conversation.findByIdAndUpdate(conversationId, { unreadCount: 0 });
+          Conversation.findByIdAndUpdate(conversationId, { unreadCount: 0 }).catch(() => {});
         } else if (role === 'customer') {
-          await Conversation.findByIdAndUpdate(conversationId, { unreadCountCustomer: 0 });
+          Conversation.findByIdAndUpdate(conversationId, { unreadCountCustomer: 0 }).catch(() => {});
         }
-
         io.emit('messages_read_ack', { conversationId, readerType: role });
-      } catch (err) {
-        console.error('Error marking messages read on room join:', err);
-      }
+      }).catch(err => console.error('Error marking messages read on room join:', err));
     });
 
     // Leave specific conversation room (Chat closed on screen)
@@ -107,21 +103,18 @@ export const setupSocket = (io) => {
       });
     });
 
-    // Real-time message dispatch & Tick status evaluation
-    socket.on('send_message', async (messageData) => {
+    // Real-time message dispatch & Tick status evaluation (0ms INSTANT)
+    socket.on('send_message', (messageData) => {
       try {
-        const { Message } = await import('../models/Message.js');
         let finalStatus = messageData.status || 'sent';
 
         if (messageData.senderType === 'customer') {
-          // Customer sent message -> evaluate Agent presence & active room
+          // Customer sent message -> evaluate Agent presence & active room in-memory
           const isAnyAgentOnline = onlineAgents.size > 0;
 
           if (!isAnyAgentOnline) {
-            // Agent Offline -> Single Gray Tick (sent)
             finalStatus = 'sent';
           } else {
-            // Agent Online -> Check if an AGENT socket has THIS conversation open on screen
             let isAgentInThisRoom = false;
             const agentSocketIds = new Set(onlineAgents.values());
             for (const [sId, convId] of activeChatRooms.entries()) {
@@ -130,17 +123,9 @@ export const setupSocket = (io) => {
                 break;
               }
             }
-
-            if (isAgentInThisRoom) {
-              // Agent is viewing this chat -> Double Blue Cyan Tick (read)
-              finalStatus = 'read';
-            } else {
-              // Agent is online but chat is not open -> Double Gray Tick (delivered)
-              finalStatus = 'delivered';
-            }
+            finalStatus = isAgentInThisRoom ? 'read' : 'delivered';
           }
         } else if (messageData.senderType === 'agent') {
-          // Agent sent message -> evaluate Customer presence
           let isCustomerInThisRoom = false;
           const customerSocketIds = new Set(onlineCustomers.values());
           for (const [sId, convId] of activeChatRooms.entries()) {
@@ -149,56 +134,64 @@ export const setupSocket = (io) => {
               break;
             }
           }
-
-          if (isCustomerInThisRoom) {
-            finalStatus = 'read';
-          } else {
-            finalStatus = 'delivered';
-          }
+          finalStatus = isCustomerInThisRoom ? 'read' : 'delivered';
         }
 
-        // Update DB status if changed
-        if (messageData._id && !messageData._id.startsWith('temp_') && finalStatus !== messageData.status) {
-          await Message.findByIdAndUpdate(messageData._id, { status: finalStatus });
-          messageData.status = finalStatus;
-        }
+        messageData.status = finalStatus;
 
-        // Keep Conversation and Customer state synced
-        if (messageData.conversation) {
-          const { Conversation } = await import('../models/Conversation.js');
-          const { Customer } = await import('../models/Customer.js');
-          const conv = await Conversation.findById(messageData.conversation);
-          if (conv) {
-            conv.lastMessage = {
-              content: messageData.content || messageData.fileName || `[${messageData.type || 'text'}]`,
-              senderType: messageData.senderType,
-              type: messageData.type || 'text',
-              timestamp: new Date()
-            };
-            conv.updatedAt = new Date();
-            if (messageData.senderType === 'customer' && finalStatus !== 'read') {
-              conv.unreadCount = (conv.unreadCount || 0) + 1;
-            }
-            await conv.save();
-
-            if (messageData.senderType === 'customer' && conv.customer) {
-              await Customer.findByIdAndUpdate(conv.customer, {
-                $set: { isGuest: false, lastSeen: new Date() }
-              });
-            }
-          }
-        }
-
-        // Broadcast message to everyone in conversation room except sender
+        // 1. INSTANT BROADCAST (<1ms): Broadcast to open chat room and admin workspace immediately
         socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);
-
-        // Notify sender of status update (Single tick / Double tick / Blue tick)
-        socket.emit('message_status_update', { messageId: messageData._id, status: finalStatus, conversationId: messageData.conversation });
-
-        // Broadcast update to global agent workspace list (instantly updates sidebar in-memory)
         io.to('agent_workspace_room').emit('conversation_activity', messageData);
+        socket.emit('message_status_update', {
+          messageId: messageData._id,
+          status: finalStatus,
+          conversationId: messageData.conversation
+        });
+
+        // 2. BACKGROUND NON-BLOCKING DB SYNC:
+        (async () => {
+          try {
+            if (messageData._id && !messageData._id.startsWith('temp_')) {
+              await Message.findByIdAndUpdate(messageData._id, { status: finalStatus });
+            }
+            if (messageData.conversation) {
+              const now = new Date();
+              const updatePayload = {
+                lastMessage: {
+                  content: messageData.content || messageData.fileName || `[${messageData.type || 'text'}]`,
+                  senderType: messageData.senderType,
+                  type: messageData.type || 'text',
+                  timestamp: now
+                },
+                updatedAt: now
+              };
+
+              if (messageData.senderType === 'customer' && finalStatus !== 'read') {
+                await Conversation.findByIdAndUpdate(messageData.conversation, {
+                  $set: updatePayload,
+                  $inc: { unreadCount: 1 }
+                });
+              } else {
+                await Conversation.findByIdAndUpdate(messageData.conversation, {
+                  $set: updatePayload
+                });
+              }
+
+              if (messageData.senderType === 'customer') {
+                const conv = await Conversation.findById(messageData.conversation).select('customer');
+                if (conv?.customer) {
+                  await Customer.findByIdAndUpdate(conv.customer, {
+                    $set: { isGuest: false, lastSeen: now }
+                  });
+                }
+              }
+            }
+          } catch (dbErr) {
+            console.error('Background DB sync error in send_message:', dbErr);
+          }
+        })();
       } catch (err) {
-        console.error('Error evaluating message tick status:', err);
+        console.error('Error in send_message socket handler:', err);
         socket.to(`conv_${messageData.conversation}`).emit('receive_message', messageData);
       }
     });
